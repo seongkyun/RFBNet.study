@@ -103,6 +103,8 @@ print('=============student_net============')
 print(net)
 
 #========================================================
+#==========Load teacher net and define layers============
+#========================================================
 cfg_t = (VOC_300, VOC_512)[args.size == '512']
 from models.RFB_Net_vgg import build_net
 net_t = build_net('train', img_dim, num_classes)
@@ -110,7 +112,6 @@ print('=============teacher_net============')
 print(net_t)
 print('Loading teacher network...')
 state_dict = torch.load(args.teacher_net)
-# create new OrderedDict that does not contain `module.`
 from collections import OrderedDict
 new_state_dict = OrderedDict()
 for k, v in state_dict.items():
@@ -127,18 +128,50 @@ for param in net.parameters():
 for param in net_t.parameters():
     param.requires_grad=False
 
-s_emb_layer = net.loc[0]
-t_emb_layer = net_t.loc[0]
-print('student test emb: ', s_emb_layer)
-print('teacher test emb: ', t_emb_layer)
+t_loc_layers = net_t.loc
+s_loc_layers = net.loc
 
-glb_feature_teacher = torch.tensor(torch.zeros(batch_size, 24, 38, 38), requires_grad=False)
-glb_feature_student = torch.tensor(torch.zeros(batch_size, 24, 19, 19), requires_grad=True)
-t_emb_layer.register_forward_hook(get_features4teacher)
-s_emb_layer.register_forward_hook(get_features4student)
+t_conf_layers = net_t.conf
+s_conf_layers = net.conf
+
+t_loc_layers_sizes = [(batch_size, 24, 38, 38)
+                    , (batch_size, 24, 19, 19)
+                    , (batch_size, 24, 10, 10)
+                    , (batch_size, 24, 5, 5)
+                    , (batch_size, 16, 3, 3)
+                    , (batch_size, 16, 1, 1)]
+s_loc_layers_sizes = [(batch_size, 24, 19, 19)
+                    , (batch_size, 24, 10, 10)
+                    , (batch_size, 24, 5, 5)
+                    , (batch_size, 24, 3, 3)
+                    , (batch_size, 16, 2, 2)
+                    , (batch_size, 16, 1, 1)]
+
+t_conf_layers_sizes = [(batch_size, 126, 38, 38)
+                    , (batch_size, 126, 19, 19)
+                    , (batch_size, 126, 10, 10)
+                    , (batch_size, 126, 5, 5)
+                    , (batch_size, 84, 3, 3)
+                    , (batch_size, 84, 1, 1)]
+s_conf_layers_sizes = [(batch_size, 126, 19, 19)
+                    , (batch_size, 126, 10, 10)
+                    , (batch_size, 126, 5, 5)
+                    , (batch_size, 126, 3, 3)
+                    , (batch_size, 84, 2, 2)
+                    , (batch_size, 84, 1, 1)]
+
+glb_feature_teacher = torch.tensor(torch.zeros(t_loc_layers_sizes[0]), requires_grad=False)
+glb_feature_student = torch.tensor(torch.zeros(s_loc_layers_sizes[0]), requires_grad=True)
+t_loc_layers[0].register_forward_hook(get_features4teacher)
+s_loc_layers[0].register_forward_hook(get_features4student)
+
+criterion_mse = nn.MSELoss()
+
 print('done')
 #sys.exit(0)
 #========================================================
+#========================================================
+
 if args.resume_net == None:
     base_weights = torch.load(args.basenet)
     print('Loading base network...')
@@ -172,7 +205,7 @@ else:
     print('Loading resume network...')
     state_dict = torch.load(args.resume_net)
     # create new OrderedDict that does not contain `module.`
-    from collections import OrderedDict
+    #from collections import OrderedDict
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         head = k[:7]
@@ -221,6 +254,7 @@ def train():
     # loss counters
     loc_loss = 0  # epoch
     conf_loss = 0
+    guid_loss = 0
     epoch = 0 + args.resume_epoch
     print('Loading Dataset...')
 
@@ -249,6 +283,9 @@ def train():
         start_iter = 0
 
     lr = args.lr
+
+    m = torch.nn.MaxPool2d(2,2,0)# Just for last layers
+
     for iteration in range(start_iter, max_iter):
         if iteration % epoch_size == 0:
             # create batch iterator
@@ -256,6 +293,7 @@ def train():
                                                   shuffle=True, num_workers=args.num_workers, collate_fn=detection_collate))
             loc_loss = 0
             conf_loss = 0
+            guid_loss = 0
             if (epoch % 10 == 0 and epoch > 0) or (epoch % 5 ==0 and epoch > 200):
                 torch.save(net.state_dict(), args.save_folder+args.version+'_'+args.dataset + '_epoches_'+
                            repr(epoch) + '.pth')
@@ -285,21 +323,26 @@ def train():
         out_t = net(images)
         emb_teacher = torch.tensor(glb_feature_teacher, requires_grad=False, device=torch.device('cuda'))
         emb_student = torch.tensor(glb_feature_student, requires_grad=True, device=torch.device('cuda'))
-        if iteration%20==0:
-            print(emb_teacher.size())
-            print(emb_student.size())
-            #print(emb_teacher)
-            #print(emb_student)
+        #if iteration%20==0:
+        #    print(emb_teacher.size())
+        #    print(emb_student.size())
+        #    print(emb_teacher)
+        #    print(emb_student)
         #==============================================
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, priors, targets)
-        loss = loss_l + loss_c
+
+        #==============================================
+        loss_g = criterion_mse(emb_student, m(emb_teacher))
+        #==============================================
+        loss = loss_l + loss_c + loss_g
         loss.backward()
         optimizer.step()
         t1 = time.time()
         loc_loss += loss_l.item()
         conf_loss += loss_c.item()
+        guid_loss += loss_g.item()
         load_t1 = time.time()
         if iteration % 10 == 0:
             print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
@@ -307,6 +350,7 @@ def train():
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(),loss_c.item()) + 
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
+            print('Guide loss: %0.4f'%loss_g.item())
 
     torch.save(net.state_dict(), args.save_folder +
                'Final_' + args.version +'_' + args.dataset+ '.pth')
