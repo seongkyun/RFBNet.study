@@ -121,14 +121,24 @@ for k, v in state_dict.items():
         name = k
     new_state_dict[name] = v
 net_t.load_state_dict(new_state_dict)
-#========================================================
-print('done')
+
+for param in net.parameters():
+    param.requires_grad=True
+for param in net_t.parameters():
+    param.requires_grad=False
+
 s_emb_layer = net.loc[0]
 t_emb_layer = net_t.loc[0]
 print('student test emb: ', s_emb_layer)
 print('teacher test emb: ', t_emb_layer)
-sys.exit(0)
 
+glb_feature_teacher = torch.tensor(torch.zeros(batch_size, 24, 38, 38), requires_grad=False)
+glb_feature_student = torch.tensor(torch.zeros(batch_size, 24, 19, 19), requires_grad=True)
+t_emb_layer.register_forward_hook(get_features4teacher)
+s_emb_layer.register_forward_hook(get_features4student)
+print('done')
+#sys.exit(0)
+#========================================================
 if args.resume_net == None:
     base_weights = torch.load(args.basenet)
     print('Loading base network...')
@@ -175,9 +185,11 @@ else:
 
 if args.ngpu > 1:
     net = torch.nn.DataParallel(net, device_ids=list(range(args.ngpu)))
+    net_t = torch.nn.DataParallel(net, device_ids=list(range(args.ngpu)))
 
 if args.cuda:
     net.cuda()
+    net_t.cuda()
     cudnn.benchmark = True
 
 
@@ -196,12 +208,15 @@ with torch.no_grad():
 
 
 def train():
+    global glb_feature_teacher
+    global glb_feature_student
     net.train()
+    net_t.eval()
 
-    import sys
-    from torchsummary import summary
-    summary(net, input_size=(3, 300, 300))
-    sys.exit()
+    #import sys
+    #from torchsummary import summary
+    #summary(net, input_size=(3, 300, 300))
+    #sys.exit()
 
     # loss counters
     loc_loss = 0  # epoch
@@ -266,6 +281,16 @@ def train():
         # forward
         t0 = time.time()
         out = net(images)
+        #==============================================
+        out_t = net(images)
+        emb_teacher = torch.tensor(glb_feature_teacher, requires_grad=False, device=torch.device('cuda'))
+        emb_student = torch.tensor(glb_feature_student, requires_grad=True, device=torch.device('cuda'))
+        if iteration%20==0:
+            print(emb_teacher.size())
+            print(emb_student.size())
+            #print(emb_teacher)
+            #print(emb_student)
+        #==============================================
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, priors, targets)
