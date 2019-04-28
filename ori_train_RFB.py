@@ -38,8 +38,7 @@ parser.add_argument('-s', '--size', default='300',
                     help='300 or 512 input size.')
 parser.add_argument('-d', '--dataset', default='VOC',
                     help='VOC or COCO dataset')
-parser.add_argument(
-    '--basenet', default='./weights/vgg16_reducedfc.pth', help='pretrained base model')
+parser.add_argument('--basenet', default=None, help='pretrained base model')
 parser.add_argument('--jaccard_threshold', default=0.5,
                     type=float, help='Min Jaccard index for matching')
 parser.add_argument('-b', '--batch_size', default=32,
@@ -88,7 +87,8 @@ if args.version == 'RFB_vgg':
 elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
-    from models.RFB_Net_mobile import build_net
+    #from models.RFB_Net_mobile import build_net
+    from models.RFB_Net_mobile_custom import build_net
     if args.dataset == 'COCO':
         cfg = COCO_mobile_300
     else:
@@ -108,9 +108,13 @@ momentum = 0.9
 net = build_net('train', img_dim, num_classes)
 print(net)
 if args.resume_net == None:
-    #base_weights = torch.load(args.basenet)
-    #print('Loading base network...')
-    #net.base.load_state_dict(base_weights)
+    if args.basenet == None:
+        print('!!Model training from scratch!!')
+    else:
+        print('!!Loading backbone network weight files!!')
+        base_weights = torch.load(args.basenet)
+        #print('Loading base network...')
+        net.base.load_state_dict(base_weights)
 
     def xavier(param):
         init.xavier_uniform(param)
@@ -244,6 +248,11 @@ def train():
         # forward
         t0 = time.time()
         out = net(images)
+        #print(images.size()) [batch_size, 3, 300, 300]
+        #print(len(out)) 2
+        #print(out[0].size()) [32, 2990, 4]
+        #print(out[1].size()) [32, 2990, 21]
+        #sys.exit()
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, priors, targets)

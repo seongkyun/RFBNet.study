@@ -2,13 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from layers import *
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.backends.cudnn as cudnn
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname('/home/han/study/RFBNet/layers/'))))
+from layers import *
 
-class BasicConv(nn.Module): # conv -> bn -> relu
+class BasicConv(nn.Module):
 
     def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True, bn=True, bias=False):
         super(BasicConv, self).__init__()
@@ -25,7 +27,7 @@ class BasicConv(nn.Module): # conv -> bn -> relu
             x = self.relu(x)
         return x
 
-class BasicSepConv(nn.Module): # spatial conv -> bn -> relu
+class BasicSepConv(nn.Module):
 
     def __init__(self, in_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True, bn=True, bias=False):
         super(BasicSepConv, self).__init__()
@@ -181,10 +183,11 @@ class RFBNet(nn.Module):
         # apply vgg up to conv4_3 relu
         for k in range(12):
             x = self.base[k](x)
-
+        #print(x.size()) [batch_size(32), 512, 19, 19]
 
         s = self.Norm(x)
         sources.append(s)
+        #print(len(s)) batch_size(32)
 
         for k in range(12, len(self.base)):
             x = self.base[k](x)
@@ -198,14 +201,20 @@ class RFBNet(nn.Module):
 
         # apply multibox head to source layers
         for (x, l, c) in zip(sources, self.loc, self.conf):
+            #print(x.size())
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
 
         #print([o.size() for o in loc])
-
+        #print([o.size() for o in conf])
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
+
+        #print('===========================')
+        #print([o.size() for o in loc])
+        #print([o.size() for o in conf])
+        #sys.exit()
 
         if self.phase == "test":
             output = (
@@ -270,13 +279,10 @@ def MobileNet():
 
 def add_extras(size, cfg, i, batch_norm=False):
     layers = []
-    in_channels = i# i = 1024
+    in_channels = i
     flag = False
-    #print(cfg) # = ['S', 512]
     for k, v in enumerate(cfg):
-        #print('===============add_extras: ', k, v) # = 0 S, 1 512
-        if in_channels != 'S': # k = 0
-            # print(k, v, in_channels) 0 S 1024
+        if in_channels != 'S':
             if v == 'S':
                 layers += [BasicRFB(in_channels, cfg[k+1], stride=2, scale = 1.0)]
             else:
@@ -310,10 +316,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
                                  cfg[k] * 4, kernel_size=1, padding=0)]
             conf_layers +=[nn.Conv2d(512,
                                  cfg[k] * num_classes, kernel_size=1, padding=0)]
-            #print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            #print(loc_layers)
-            #print(conf_layers)
-            #print('end===========================')
         else:
             loc_layers += [nn.Conv2d(1024,
                                  cfg[k] * 4, kernel_size=1, padding=0)]
@@ -335,7 +337,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
     '''
-    #print(cfg)  [6, 6, 6, 6, 4, 4]
     print('========base==========')
     print(base)
     print('=========extra=========')
@@ -347,12 +348,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
     import sys
     sys.exit()
     '''
-    #print('========base=========')
-    #print(base)
-    #print('========extra=========')
-    #print(extra_layers)
-    #import sys
-    #sys.exit()
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {
@@ -371,3 +366,16 @@ def build_net(phase, size=300, num_classes=21):
     return RFBNet(phase, size, *multibox(size, MobileNet(),
                                 add_extras(size, extras[str(size)], 1024),
                                 mbox[str(size)], num_classes), num_classes)
+
+def test():
+    net = build_net('train', 300, 21).cuda()
+    from torchsummary import summary
+    summary(net, input_size=(3, 300, 300))
+    inputs = torch.randn(32, 3, 300, 300)
+    out = net(inputs.cuda())
+    print(net)
+    print(len(out))
+    print('coords output size: ', out[0].size())
+    print('class output size: ', out[1].size())
+
+#test()
