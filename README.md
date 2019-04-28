@@ -1,3 +1,6 @@
+# !!IMPORTANT!!
+- This repo is came from (RFBNet)[https://github.com/ruinmessi/RFBNet ] and modified for my experiment.
+
 # Receptive Field Block Net for Accurate and Fast Object Detection
 
 By Songtao Liu, Di Huang, Yunhong Wang
