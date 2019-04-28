@@ -33,6 +33,7 @@ VOC_300 = {
 
 VOC_mobile_300 = {
     'feature_maps' : [19, 10, 5, 3, 2, 1],
+    #'feature_maps' : [38, 19, 10, 5, 3, 1],
 
     'min_dim' : 300,
 

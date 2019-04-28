@@ -8,7 +8,7 @@ import torchvision.models as models
 import torch.backends.cudnn as cudnn
 import os
 
-class BasicConv(nn.Module): # conv -> bn -> relu
+class BasicConv(nn.Module):
 
     def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True, bn=True, bias=False):
         super(BasicConv, self).__init__()
@@ -25,7 +25,7 @@ class BasicConv(nn.Module): # conv -> bn -> relu
             x = self.relu(x)
         return x
 
-class BasicSepConv(nn.Module): # spatial conv -> bn -> relu
+class BasicSepConv(nn.Module):
 
     def __init__(self, in_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True, bn=True, bias=False):
         super(BasicSepConv, self).__init__()
@@ -270,13 +270,10 @@ def MobileNet():
 
 def add_extras(size, cfg, i, batch_norm=False):
     layers = []
-    in_channels = i# i = 1024
+    in_channels = i
     flag = False
-    #print(cfg) # = ['S', 512]
     for k, v in enumerate(cfg):
-        #print('===============add_extras: ', k, v) # = 0 S, 1 512
-        if in_channels != 'S': # k = 0
-            # print(k, v, in_channels) 0 S 1024
+        if in_channels != 'S':
             if v == 'S':
                 layers += [BasicRFB(in_channels, cfg[k+1], stride=2, scale = 1.0)]
             else:
@@ -310,10 +307,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
                                  cfg[k] * 4, kernel_size=1, padding=0)]
             conf_layers +=[nn.Conv2d(512,
                                  cfg[k] * num_classes, kernel_size=1, padding=0)]
-            #print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            #print(loc_layers)
-            #print(conf_layers)
-            #print('end===========================')
         else:
             loc_layers += [nn.Conv2d(1024,
                                  cfg[k] * 4, kernel_size=1, padding=0)]
@@ -334,25 +327,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
             conf_layers += [nn.Conv2d(v.out_channels, cfg[i]
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
-    '''
-    #print(cfg)  [6, 6, 6, 6, 4, 4]
-    print('========base==========')
-    print(base)
-    print('=========extra=========')
-    print(extra_layers)
-    print('=========loc=========')
-    print(loc_layers)
-    print('=========conf=========')
-    print(conf_layers)
-    import sys
-    sys.exit()
-    '''
-    #print('========base=========')
-    #print(base)
-    #print('========extra=========')
-    #print(extra_layers)
-    #import sys
-    #sys.exit()
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {

@@ -131,7 +131,7 @@ def voc_eval(detpath,
         bbox = np.array([x['bbox'] for x in R])
         difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
         det = [False] * len(R)
-        npos = npos + sum(~difficult)
+        npos = npos + sum(difficult)
         class_recs[imagename] = {'bbox': bbox,
                                  'difficult': difficult,
                                  'det': det}
@@ -156,6 +156,12 @@ def voc_eval(detpath,
     nd = len(image_ids)
     tp = np.zeros(nd)
     fp = np.zeros(nd)
+
+    size_max = 0
+    size_min = float("inf")
+
+    sizes = [] # added by han
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -172,6 +178,14 @@ def voc_eval(detpath,
             iw = np.maximum(ixmax - ixmin + 1., 0.)
             ih = np.maximum(iymax - iymin + 1., 0.)
             inters = iw * ih
+            
+            #start _added by han
+            obj_size = (BBGT[:, 2] - BBGT[:, 0] + 1.) * (BBGT[:, 3] - BBGT[:, 1] + 1.)
+            for qq in range(len(obj_size)):
+                size_max = np.maximum(size_max, obj_size[qq])
+                size_min = np.minimum(size_min, obj_size[qq])
+                sizes.append(round(obj_size[qq] + 500, -3))
+            #end _added by han
 
                 # union
             uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
@@ -200,5 +214,68 @@ def voc_eval(detpath,
         # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
+    
 
+    ''' #added by han
+    #==============Calculating object size and drawing histograms============
+    import sys
+    import matplotlib.pyplot as plt
+
+    print("max_size: ", size_max)#214570
+    print("min_size: ", size_min)#238
+    print("size len: ", len(sizes))#22573
+    #print(round(size_min + 500, -3), round(size_max + 500, -3))#1000 215000
+    bins = np.arange(round(size_min + 500, -3), round(size_max + 500, -3)+1000, 1000)
+    nums, bins = np.histogram(sizes, bins)
+    print(nums)
+    print(bins)
+    sum_temp = 0
+    for j in range(len(nums)):
+        sum_temp += nums[j]
+    print('Total: ', len(sizes),'|| Plotted: ', sum_temp)
+
+    plt.hist(nums, bins)
+    plt.grid()
+    plt.xlabel('Sizes (pixels)', fontsize = 14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.savefig("total_histogram.png", dpi=350)
+    plt.clf()
+
+    
+    bins2 = np.arange(round(size_min + 500, -3), (round(size_max + 500, -3)+1000)//2, 1000)
+    nums2, bins2 = np.histogram(sizes[:(len(sizes)//2)], bins2)
+    print(nums2)
+    print(bins2)
+    sum_temp = 0
+    for j in range(len(nums2)):
+        sum_temp += nums2[j]
+    print('Total: ', len(sizes),'|| Plotted: ', sum_temp)
+
+    plt.hist(nums2, bins2)
+    plt.grid()
+    plt.xlabel('Sizes (pixels)', fontsize = 14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.savefig("half_histogram.png", dpi=350)
+    plt.clf()
+    
+    bins1 = np.arange(0, 10000, 1000)
+    nums1, bins1 = np.histogram(sizes, bins1)
+    print(nums1)
+    print(bins1)
+
+    plt.hist(nums1, bins1)
+    plt.grid()
+    plt.xlabel('Sizes (pixels)', fontsize = 14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.savefig("first10_histogram.png", dpi=350)
+    plt.clf()
+
+    print('done.')
+    sys.exit()
+    #========================================================================
+    '''
+    
     return rec, prec, ap

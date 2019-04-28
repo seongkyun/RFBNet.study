@@ -68,6 +68,10 @@ parser.add_argument('--save_folder', default='./weights/',
                     help='Location to save checkpoint models')
 args = parser.parse_args()
 
+#def init_weights(module):
+#    if isinstance(module, nn.Conv2d):
+#        xavier(module.weight.data)
+#        xavier(module.bias.data)
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
@@ -104,9 +108,9 @@ momentum = 0.9
 net = build_net('train', img_dim, num_classes)
 print(net)
 if args.resume_net == None:
-    base_weights = torch.load(args.basenet)
-    print('Loading base network...')
-    net.base.load_state_dict(base_weights)
+    #base_weights = torch.load(args.basenet)
+    #print('Loading base network...')
+    #net.base.load_state_dict(base_weights)
 
     def xavier(param):
         init.xavier_uniform(param)
@@ -172,9 +176,9 @@ with torch.no_grad():
 def train():
     net.train()
 
-    #import sys
-    #from torchsummary import summary
-    #summary(net, input_size=(3, 300, 300))
+    import sys
+    from torchsummary import summary
+    summary(net, input_size=(3, 300, 300))
     #sys.exit()
 
     # loss counters
@@ -256,7 +260,6 @@ def train():
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(),loss_c.item()) + 
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
-
     torch.save(net.state_dict(), args.save_folder +
                'Final_' + args.version +'_' + args.dataset+ '.pth')
 

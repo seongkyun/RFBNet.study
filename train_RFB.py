@@ -121,6 +121,7 @@ for k, v in state_dict.items():
     else:
         name = k
     new_state_dict[name] = v
+
 net_t.load_state_dict(new_state_dict)
 
 for param in net.parameters():
@@ -248,7 +249,7 @@ def train():
 
     #import sys
     #from torchsummary import summary
-    #summary(net, input_size=(3, 300, 300))
+    #summary(net_t, input_size=(3, 300, 300))
     #sys.exit()
 
     # loss counters
