@@ -131,7 +131,7 @@ def voc_eval(detpath,
         bbox = np.array([x['bbox'] for x in R])
         difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
         det = [False] * len(R)
-        npos = npos + sum(~difficult)
+        npos = npos + sum(difficult)
         class_recs[imagename] = {'bbox': bbox,
                                  'difficult': difficult,
                                  'det': det}
@@ -178,6 +178,14 @@ def voc_eval(detpath,
             iw = np.maximum(ixmax - ixmin + 1., 0.)
             ih = np.maximum(iymax - iymin + 1., 0.)
             inters = iw * ih
+            
+            #start _added by han
+            obj_size = (BBGT[:, 2] - BBGT[:, 0] + 1.) * (BBGT[:, 3] - BBGT[:, 1] + 1.)
+            for qq in range(len(obj_size)):
+                size_max = np.maximum(size_max, obj_size[qq])
+                size_min = np.minimum(size_min, obj_size[qq])
+                sizes.append(round(obj_size[qq] + 500, -3))
+            #end _added by han
 
                 # union
             uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
@@ -187,14 +195,6 @@ def voc_eval(detpath,
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
-
-            #start _added by han
-            obj_size = (BBGT[:, 2] - BBGT[:, 0] + 1.) * (BBGT[:, 3] - BBGT[:, 1] + 1.)
-            for qq in range(len(obj_size)):
-                size_max = np.maximum(size_max, obj_size[qq])
-                size_min = np.minimum(size_min, obj_size[qq])
-                sizes.append(round(obj_size[qq] + 500, -3))
-            #end _added by han
 
         if ovmax > ovthresh:
             if not R['difficult'][jmax]:
@@ -214,7 +214,7 @@ def voc_eval(detpath,
         # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
-
+    
 
     ''' #added by han
     #==============Calculating object size and drawing histograms============
