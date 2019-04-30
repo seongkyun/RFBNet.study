@@ -15,6 +15,8 @@ from data import VOCroot, COCOroot, VOC_300, VOC_512, VOC_mobile_300, COCO_300, 
 from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
 import time
+import sys
+from torchsummary import summary
 
 '''
 global glb_feature_teacher
@@ -87,7 +89,12 @@ if args.version == 'RFB_vgg':
 elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
-    #from models.RFB_Net_mobile import build_net
+    from models.RFB_Net_mobile import build_net
+    if args.dataset == 'COCO':
+        cfg = COCO_mobile_300
+    else:
+        cfg = VOC_mobile_300
+elif args.version == 'RFB_mobile_custom':
     from models.RFB_Net_mobile_custom import build_net
     if args.dataset == 'COCO':
         cfg = COCO_mobile_300
@@ -97,8 +104,8 @@ else:
     print('Unkown version!')
 
 img_dim = (300,512)[args.size=='512']
-rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
-p = (0.6,0.2)[args.version == 'RFB_mobile']
+rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom']
+p = (0.6,0.2)[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom']
 num_classes = (21, 81)[args.dataset == 'COCO']
 batch_size = args.batch_size
 weight_decay = 0.0005
@@ -180,8 +187,6 @@ with torch.no_grad():
 def train():
     net.train()
 
-    import sys
-    from torchsummary import summary
     summary(net, input_size=(3, 300, 300))
     #sys.exit()
 

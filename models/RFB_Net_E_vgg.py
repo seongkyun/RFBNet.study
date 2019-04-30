@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from layers import *
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.backends.cudnn as cudnn
-import os
+import os, sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname('/home/han/study/RFBNet/layers/'))))
+from layers import *
 
 class BasicConv(nn.Module):
 
@@ -72,6 +73,8 @@ class BasicRFB(nn.Module):
         out = out*self.scale + short
         out = self.relu(out)
 
+        #print('BasicRFB: ', out.size())
+
         return out
 
 class BasicRFB_c(nn.Module):
@@ -111,6 +114,8 @@ class BasicRFB_c(nn.Module):
         short = self.shortcut(x)
         out = out*self.scale + short
         out = self.relu(out)
+
+        #print('RFB_c: ', out.size())
 
         return out
 
@@ -178,6 +183,8 @@ class BasicRFB_a(nn.Module):
         short = self.shortcut(x)
         out = out*self.scale + short
         out = self.relu(out)
+
+        #print('RFB_a: ', out.size())
 
         return out
 
@@ -405,3 +412,20 @@ def build_net(phase, size=300, num_classes=21):
     return RFBNet(phase, size, *multibox(size, vgg(base[str(size)], 3),
                                 add_extras(size, extras[str(size)], 1024),
                                 mbox[str(size)], num_classes), num_classes)
+
+def test():
+    net = build_net('train', 300, 21).cuda()
+    from torchsummary import summary
+    summary(net, input_size=(3, 300, 300))
+    inputs = torch.randn(32, 3, 300, 300)
+    out = net(inputs.cuda())
+    print(net)
+    #print(len(out))
+    print('RFB_a:  torch.Size([32, 512, 38, 38])\n \
+BasicRFB:  torch.Size([32, 1024, 19, 19])\n \
+BasicRFB:  torch.Size([32, 512, 10, 10])\n \
+BasicRFB:  torch.Size([32, 256, 5, 5])')
+    print('coords output size: ', out[0].size())
+    print('class output size: ', out[1].size())
+
+test()

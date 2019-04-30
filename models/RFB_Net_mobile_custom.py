@@ -44,6 +44,56 @@ class BasicSepConv(nn.Module):
             x = self.relu(x)
         return x
 
+class BasicRFB_e(nn.Module):
+
+    def __init__(self, in_planes, out_planes, stride=1, scale = 0.1,map_reduce=8):
+        super(BasicRFB_e, self).__init__()
+        self.scale = scale
+        self.out_channels = out_planes
+        inter_planes = in_planes // map_reduce
+
+        self.branch0 = nn.Sequential(
+                BasicConv(in_planes, 2*inter_planes, kernel_size=1, stride=stride),
+                BasicConv(2*inter_planes, 2*inter_planes, kernel_size=3, stride=1, padding=1,relu=False)
+                )
+        self.branch1 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, 2*inter_planes, kernel_size=(3,3), stride=stride, padding=(1,1)),
+                BasicConv(2*inter_planes, 2*inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
+                )
+        self.branch2 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, (inter_planes//2)*3, kernel_size=3, stride=1, padding=1),
+                BasicConv((inter_planes//2)*3, 2*inter_planes, kernel_size=3, stride=stride, padding=1),
+                BasicConv(2*inter_planes, 2*inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
+                )
+        self.branch3 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, (inter_planes//2)*3, kernel_size=(1,7), stride=1, padding=(0,3)),
+                BasicConv((inter_planes//2)*3, 2*inter_planes, kernel_size=(7,1), stride=stride, padding=(3,0)),
+                BasicConv(2*inter_planes, 2*inter_planes, kernel_size=3, stride=1, padding=7, dilation=7, relu=False)
+                )
+
+        self.ConvLinear = BasicConv(8*inter_planes, out_planes, kernel_size=1, stride=1, relu=False)
+        self.shortcut = BasicConv(in_planes, out_planes, kernel_size=1, stride=stride, relu=False)
+        self.relu = nn.ReLU(inplace=False)
+
+    def forward(self,x):
+        x0 = self.branch0(x)
+        x1 = self.branch1(x)
+        x2 = self.branch2(x)
+        x3 = self.branch3(x)
+
+        out = torch.cat((x0,x1,x2,x3),1)
+        out = self.ConvLinear(out)
+        short = self.shortcut(x)
+        out = out*self.scale + short
+        out = self.relu(out)
+
+        #print('BasicRFB: ', out.size())
+
+        return out
+
 class BasicRFB(nn.Module):
 
     def __init__(self, in_planes, out_planes, stride=1, scale = 0.1):
@@ -84,6 +134,78 @@ class BasicRFB(nn.Module):
             short = self.shortcut(x)
             out = out*self.scale + short
         out = self.relu(out)
+
+        #print('basicRFB: ', out.size())
+
+        return out
+
+class BasicRFB_a_e(nn.Module):
+
+    def __init__(self, in_planes, out_planes, stride=1, scale = 0.1):
+        super(BasicRFB_a_e, self).__init__()
+        self.scale = scale
+        self.out_channels = out_planes
+        inter_planes = in_planes //8
+
+
+        self.branch0 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=1,relu=False)
+                )
+        self.branch1 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=(3,1), stride=1, padding=(1,0)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
+                )
+        self.branch2 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
+                )
+        self.branch3 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=(3,1), stride=1, padding=(1,0)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
+                )
+        self.branch4 = nn.Sequential(
+                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
+                BasicConv(inter_planes, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
+                )
+        self.branch5 = nn.Sequential(
+                BasicConv(in_planes, inter_planes//2, kernel_size=1, stride=1),
+                BasicConv(inter_planes//2, (inter_planes//4)*3, kernel_size=(1,3), stride=1, padding=(0,1)),
+                BasicConv((inter_planes//4)*3, inter_planes, kernel_size=(3,1), stride=stride, padding=(1,0)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=7, dilation=7, relu=False)
+                )
+
+        self.branch6 = nn.Sequential(
+                BasicConv(in_planes, inter_planes//2, kernel_size=1, stride=1),
+                BasicConv(inter_planes//2, (inter_planes//4)*3, kernel_size=(3,1), stride=1, padding=(1,0)),
+                BasicConv((inter_planes//4)*3, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
+                BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=7, dilation=7, relu=False)
+                )
+        self.ConvLinear = BasicConv(7*inter_planes, out_planes, kernel_size=1, stride=1, relu=False)
+        self.shortcut = BasicConv(in_planes, out_planes, kernel_size=1, stride=stride, relu=False)
+        self.relu = nn.ReLU(inplace=False)
+
+    def forward(self,x):
+        x0 = self.branch0(x)
+        x1 = self.branch1(x)
+        x2 = self.branch2(x)
+        x3 = self.branch3(x)
+        x4 = self.branch4(x)
+        x5 = self.branch5(x)
+        x6 = self.branch6(x)
+
+        out = torch.cat((x0,x1,x2,x3,x4,x5,x6),1)
+        out = self.ConvLinear(out)
+        short = self.shortcut(x)
+        out = out*self.scale + short
+        out = self.relu(out)
+
+        #print('RFB_a: ', out.size())
 
         return out
 
@@ -126,11 +248,15 @@ class BasicRFB_a(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-
+        #print('x0,1, 2, 3', x0.size(), x1.size(), x2.size(), x3.size())
         out = torch.cat((x0,x1,x2,x3),1)
+        #print('after concat', out.size())
         out = self.ConvLinear(out)
+        #print('after convlinear', out.size())
         out = out*self.scale + x
+        #print('after plus', out.size())
         out = self.relu(out)
+        print('RFB_a: ', out.size())
 
         return out
 
@@ -149,7 +275,8 @@ class RFBNet(nn.Module):
             return
 
         self.base = nn.ModuleList(base)
-        self.Norm = BasicRFB_a(512,512,stride = 1,scale=1.0)
+        #self.Norm = BasicRFB_a(512,512,stride = 1,scale=1.0)
+        self.Norm = BasicRFB_a_e(512,512,stride = 1,scale=1.0)
         self.extras = nn.ModuleList(extras)
 
         self.loc = nn.ModuleList(head[0])
@@ -181,8 +308,7 @@ class RFBNet(nn.Module):
         conf = list()
 
         # apply vgg up to conv4_3 relu
-        #for k in range(12): # ori
-        for k in range(13): # modi
+        for k in range(12):
             x = self.base[k](x)
         #print(x.size()) [batch_size(32), 512, 19, 19]
 
@@ -190,8 +316,7 @@ class RFBNet(nn.Module):
         sources.append(s)
         #print(len(s)) batch_size(32)
 
-        #for k in range(12, len(self.base)): # ori
-        for k in range(12, len(self.base)): # modi
+        for k in range(12, len(self.base)):
             x = self.base[k](x)
         sources.append(x)
 
@@ -260,27 +385,20 @@ def conv_dw(inp, oup, stride):
 
 def MobileNet():
     layers = []
-    layers += [conv_bn(3, 32, 2)]# 0
-    layers += [conv_dw(32, 64, 1)]# 1
-    layers += [conv_dw(64, 128, 2)]# 2
-    #layers += [conv_dw(128, 128, 1)]# 3
-    layers += [conv_dw(128, 64, 1)]# 3-1 added
-    layers += [conv_dw(64, 128, 1)]# 3-2 added
-    layers += [conv_dw(128, 256, 2)]# 4
-    layers += [conv_dw(256, 256, 1)]# 5
-    #layers += [conv_dw(256, 512, 2)]# 6
-    layers += [conv_dw(256, 256, 2)]# 6 added
-    #layers += [conv_dw(512, 512, 1)]# 7
-    layers += [conv_dw(256, 64, 1)]# 7 added
-    #layers += [conv_dw(512, 512, 1)]# 8
-    layers += [conv_dw(64, 64, 1)]# 8 added
-    #layers += [conv_dw(512, 512, 1)]# 9
-    layers += [conv_dw(64, 256, 1)]# 9 added
-    #layers += [conv_dw(512, 512, 1)]# 10
-    layers += [conv_dw(256, 512, 1)]# 10 added
-    layers += [conv_dw(512, 512, 1)]# 11
-    layers += [conv_dw(512, 1024, 2)]# 12
-    layers += [conv_dw(1024, 1024, 1)]# 13
+    layers += [conv_bn(3, 32, 2)]
+    layers += [conv_dw(32, 64, 1)]
+    layers += [conv_dw(64, 128, 2)]
+    layers += [conv_dw(128, 128, 1)]
+    layers += [conv_dw(128, 256, 2)]
+    layers += [conv_dw(256, 256, 1)]
+    layers += [conv_dw(256, 512, 2)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 1024, 2)]
+    layers += [conv_dw(1024, 1024, 1)]
 
     return layers
 
@@ -293,9 +411,11 @@ def add_extras(size, cfg, i, batch_norm=False):
     for k, v in enumerate(cfg):
         if in_channels != 'S':
             if v == 'S':
-                layers += [BasicRFB(in_channels, cfg[k+1], stride=2, scale = 1.0)]
+                #layers += [BasicRFB(in_channels, cfg[k+1], stride=2, scale = 1.0)]
+                layers += [BasicRFB_e(in_channels, cfg[k+1], stride=2, scale = 1.0)]
             else:
-                layers += [BasicRFB(in_channels, v, scale = 1.0)]
+                #layers += [BasicRFB(in_channels, v, scale = 1.0)]
+                layers += [BasicRFB_e(in_channels, v, scale = 1.0)]
         in_channels = v
     if size ==300:
         layers += [BasicConv(512,128,kernel_size=1,stride=1)]
@@ -383,7 +503,9 @@ def test():
     inputs = torch.randn(32, 3, 300, 300)
     out = net(inputs.cuda())
     print(net)
-    print(len(out))
+    #print(len(out))
+    print('RFB_a:  torch.Size([32, 512, 19, 19])\n \
+basicRFB:  torch.Size([32, 512, 5, 5]) ')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 

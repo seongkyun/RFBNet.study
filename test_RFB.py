@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 import numpy as np
 from torch.autograd import Variable
 from data import VOCroot,COCOroot 
-from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300,VOC_512,COCO_300,COCO_512, COCO_mobile_300
+from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300,VOC_512,COCO_300,COCO_512, COCO_mobile_300, VOC_mobile_300
 
 import torch.utils.data as data
 from layers.functions import Detect,PriorBox
@@ -51,7 +51,16 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    cfg = COCO_mobile_300
+    if args.dataset == 'COCO':
+        cfg = COCO_mobile_300
+    else:
+        cfg = VOC_mobile_300
+elif args.version == 'RFB_mobile_custom':
+    from models.RFB_Net_mobile_custom import build_net
+    if args.dataset == 'COCO':
+        cfg = COCO_mobile_300
+    else:
+        cfg = VOC_mobile_300
 else:
     print('Unkown version!')
 
@@ -74,6 +83,8 @@ def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image
     num_classes = (21, 81)[args.dataset == 'COCO']
     all_boxes = [[[] for _ in range(num_images)]
                  for _ in range(num_classes)]
+
+    f = open('./' + str(args.version) + '_' + str(args.dataset) + '_log.out', 'a')
 
     _t = {'im_detect': Timer(), 'misc': Timer()}
     det_file = os.path.join(save_folder, 'detections.pkl')
@@ -134,8 +145,12 @@ def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image
         nms_time = _t['misc'].toc()
 
         if i % 20 == 0:
-            print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
-                .format(i + 1, num_images, detect_time, nms_time))
+            status = 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time)
+            status_w = 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s\n'.format(i + 1, num_images, detect_time, nms_time)
+            #print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
+            #    .format(i + 1, num_images, detect_time, nms_time))
+            print(status)
+            f.write(status_w)
             _t['im_detect'].clear()
             _t['misc'].clear()
 
@@ -144,6 +159,7 @@ def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image
 
     print('Evaluating detections')
     testset.evaluate_detections(all_boxes, save_folder)
+    f.close()
 
 
 if __name__ == '__main__':

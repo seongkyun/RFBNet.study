@@ -153,14 +153,13 @@ def voc_eval(detpath,
     image_ids = [image_ids[x] for x in sorted_ind]
 
         # go down dets and mark TPs and FPs
-    nd = len(image_ids)
-    tp = np.zeros(nd)
-    fp = np.zeros(nd)
+    #nd = len(image_ids)
+    #tp = np.zeros(nd)
+    #fp = np.zeros(nd)
 
-    size_max = 0
-    size_min = float("inf")
-
-    sizes = [] # added by han
+    #size_max = 0 # added by han
+    #size_min = float("inf") # added by han
+    #sizes = [] # added by han
 
     for d in range(nd):
         R = class_recs[image_ids[d]]
@@ -189,11 +188,11 @@ def voc_eval(detpath,
             jmax = np.argmax(overlaps)
 
             #start _added by han
-            obj_size = (BBGT[:, 2] - BBGT[:, 0] + 1.) * (BBGT[:, 3] - BBGT[:, 1] + 1.)
-            for qq in range(len(obj_size)):
-                size_max = np.maximum(size_max, obj_size[qq])
-                size_min = np.minimum(size_min, obj_size[qq])
-                sizes.append(round(obj_size[qq] + 500, -3))
+            #obj_size = (BBGT[:, 2] - BBGT[:, 0] + 1.)*(BBGT[:, 3] - BBGT[:, 1] + 1.)
+            #for qq in range(len(obj_size)):
+            #    size_max = np.maximum(size_max, obj_size[qq])
+            #    size_min = np.minimum(size_min, obj_size[qq])
+            #    sizes.append(int(round(obj_size[qq] + 5, -1)))
             #end _added by han
 
         if ovmax > ovthresh:
@@ -215,8 +214,8 @@ def voc_eval(detpath,
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
 
-
-    ''' #added by han
+    '''
+    #added by han
     #==============Calculating object size and drawing histograms============
     import sys
     import matplotlib.pyplot as plt
@@ -224,58 +223,29 @@ def voc_eval(detpath,
     print("max_size: ", size_max)#214570
     print("min_size: ", size_min)#238
     print("size len: ", len(sizes))#22573
-    #print(round(size_min + 500, -3), round(size_max + 500, -3))#1000 215000
-    bins = np.arange(round(size_min + 500, -3), round(size_max + 500, -3)+1000, 1000)
-    nums, bins = np.histogram(sizes, bins)
-    print(nums)
-    print(bins)
+
+    sizes_calc = sizes
+    bins = np.arange(0, round(size_max + 50, -2)+10, 10)
+    nums, bins = np.histogram(sizes_calc, bins)
+    #print(nums)
+    #print(bins)
     sum_temp = 0
     for j in range(len(nums)):
         sum_temp += nums[j]
-    print('Total: ', len(sizes),'|| Plotted: ', sum_temp)
-
-    plt.hist(nums, bins)
-    plt.grid()
-    plt.xlabel('Sizes (pixels)', fontsize = 14)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.savefig("total_histogram.png", dpi=350)
-    plt.clf()
-
+    print('All Total: ', len(sizes),'|| Plotted: ', sum_temp)
     
-    bins2 = np.arange(round(size_min + 500, -3), (round(size_max + 500, -3)+1000)//2, 1000)
-    nums2, bins2 = np.histogram(sizes[:(len(sizes)//2)], bins2)
-    print(nums2)
-    print(bins2)
-    sum_temp = 0
-    for j in range(len(nums2)):
-        sum_temp += nums2[j]
-    print('Total: ', len(sizes),'|| Plotted: ', sum_temp)
-
-    plt.hist(nums2, bins2)
+    plt.hist(nums[:10], bins[:10])
     plt.grid()
     plt.xlabel('Sizes (pixels)', fontsize = 14)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    plt.savefig("half_histogram.png", dpi=350)
+    plt.savefig("histogram1.png", dpi=350)
+    plt.cla()
     plt.clf()
-    
-    bins1 = np.arange(0, 10000, 1000)
-    nums1, bins1 = np.histogram(sizes, bins1)
-    print(nums1)
-    print(bins1)
+    plt.close()
 
-    plt.hist(nums1, bins1)
-    plt.grid()
-    plt.xlabel('Sizes (pixels)', fontsize = 14)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.savefig("first10_histogram.png", dpi=350)
-    plt.clf()
-
-    print('done.')
     sys.exit()
-    #========================================================================
     '''
+    #========================================================================
     
     return rec, prec, ap
