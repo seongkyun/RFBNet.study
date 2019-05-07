@@ -21,4 +21,3 @@ pretrained
 models/RFB_Net_mobile_custom_vggsize.py
 ./modi_train_RFB.py
 *.out
-demo_lib

@@ -212,7 +212,8 @@ if __name__ == '__main__':
         save_folder = args.save_folder
     else:
         save_folder = os.path.join(args.save_folder,args.dataset)
-    rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
+    #rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile']
+    rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
     test_net(save_folder, net, detector, args.cuda, testset,
              BaseTransform(net.size, rgb_means, (2, 0, 1)),
              top_k, thresh=0.01)

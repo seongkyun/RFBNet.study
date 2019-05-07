@@ -18,20 +18,6 @@ import time
 import sys
 from torchsummary import summary
 
-'''
-global glb_feature_teacher
-global glb_feature_student
-def get_features4teacher(self, input, output):
-    global glb_feature_teacher
-    glb_feature_teacher = output
-    return None
-
-def get_features4student(self, input, output):
-    global glb_feature_student
-    glb_feature_student = output
-    return None
-'''
-
 parser = argparse.ArgumentParser(
     description='Receptive Field Block Net Training')
 parser.add_argument('-v', '--version', default='RFB_vgg',
@@ -110,8 +96,8 @@ else:
     print('Unkown version!')
 
 img_dim = (300,512)[args.size=='512']
-rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom']
-p = (0.6,0.2)[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom']
+rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
+p = (0.6,0.2)[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
 num_classes = (21, 81)[args.dataset == 'COCO']
 batch_size = args.batch_size
 weight_decay = 0.0005
@@ -259,11 +245,6 @@ def train():
         # forward
         t0 = time.time()
         out = net(images)
-        #print(images.size()) [batch_size, 3, 300, 300]
-        #print(len(out)) 2
-        #print(out[0].size()) [32, 2990, 4]
-        #print(out[1].size()) [32, 2990, 21]
-        #sys.exit()
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, priors, targets)

@@ -421,10 +421,10 @@ def test():
     out = net(inputs.cuda())
     print(net)
     #print(len(out))
-    print('RFB_a:  torch.Size([32, 512, 38, 38])\n \
-BasicRFB:  torch.Size([32, 1024, 19, 19])\n \
-BasicRFB:  torch.Size([32, 512, 10, 10])\n \
-BasicRFB:  torch.Size([32, 256, 5, 5])')
+#    print('RFB_a:  torch.Size([32, 512, 38, 38])\n \
+#BasicRFB:  torch.Size([32, 1024, 19, 19])\n \
+#BasicRFB:  torch.Size([32, 512, 10, 10])\n \
+#BasicRFB:  torch.Size([32, 256, 5, 5])')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 

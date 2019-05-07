@@ -504,9 +504,9 @@ def test():
     out = net(inputs.cuda())
     print(net)
     #print(len(out))
-    print('RFB_a:  torch.Size([32, 512, 19, 19])\n \
-basicRFB:  torch.Size([32, 512, 5, 5]) ')
+#    print('RFB_a:  torch.Size([32, 512, 19, 19])\n \
+#basicRFB:  torch.Size([32, 512, 5, 5]) ')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-#test()
+test()
