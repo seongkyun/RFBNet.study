@@ -19,7 +19,6 @@ import matplotlib.image as mpimg
 import matplotlib.patches as patches
 from utils.nms_wrapper import nms
 from utils.timer import Timer
-from data.coco import COCO_CLASSES
 
 parser = argparse.ArgumentParser(description='Receptive Field Block Net')
 
@@ -47,8 +46,10 @@ if not os.path.exists(args.save_folder):
 
 if args.dataset == 'VOC':
     cfg = (VOC_300, VOC_512)[args.size == '512']
+    from data.voc0712 import VOC_CLASSES
 else:
     cfg = (COCO_300, COCO_512)[args.size == '512']
+    from data.coco import COCO_CLASSES
 
 if args.version == 'RFB_vgg':
     from models.RFB_Net_vgg import build_net
@@ -56,28 +57,16 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_custom':
     from models.RFB_Net_mobile_custom import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c_leaky':
     from models.RFB_Net_mobile_c_leaky import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300 
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c_l_d':
     from models.RFB_Net_mobile_c_l_d import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300 
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 else:
     print('Unkown version!')
 
@@ -155,7 +144,7 @@ if __name__ == '__main__':
     print('Finished loading model')
     
     detector = Detect(num_classes,0,cfg)
-    transform = BaseTransform(net.size, (104, 117, 123), (2, 0, 1))
+    transform = BaseTransform(net.size, rgb_means, (2, 0, 1))
     
     demo_img(net, detector, transform, "./result.jpg")
 
