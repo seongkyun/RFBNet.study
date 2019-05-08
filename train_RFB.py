@@ -16,7 +16,10 @@ from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
 import time
 import sys
-from torchsummary import summary
+#from torchsummary import summary
+
+from tensorboardX import SummaryWriter
+summary = SummaryWriter()
 
 parser = argparse.ArgumentParser(
     description='Receptive Field Block Net Training')
@@ -254,7 +257,12 @@ def train():
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(),loss_c.item()) + 
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
-            
+            summary.add_scalar('loss/loss_l', loss_l.item(), iteration)
+            summary.add_scalar('loss/loss_c', loss_c.item(), iteration)
+            summary.add_scalar('learning_rate', lr, iteration)
+            summary.add_scalars('loss/loss', {"loss_l": loss_l.item(),
+                                            "loss_c": loss_c.item(),
+                                            "loss": loss.item()}, iteration)
     filedir = os.path.join(save_dir, 'Final_epoch.pth')
     torch.save(net.state_dict(), filedir)
 

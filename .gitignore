@@ -12,13 +12,17 @@ build/
 
 
 weights
-eval
 pretrained
 
 *.pth
 
+# Temporary files
+runs
+eval
+
 # Experimental codes
 models/RFB_Net_mobile_custom_vggsize.py
+
 *.out
 *.jpg
 *.mp4
