@@ -55,11 +55,6 @@ parser.add_argument('--save_folder', default='./weights/',
                     help='Location to save checkpoint models')
 args = parser.parse_args()
 
-#def init_weights(module):
-#    if isinstance(module, nn.Conv2d):
-#        xavier(module.weight.data)
-#        xavier(module.bias.data)
-
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
 
@@ -76,24 +71,18 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_custom':
     from models.RFB_Net_mobile_custom import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c_leaky':
     from models.RFB_Net_mobile_c_leaky import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300   
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'RFB_mobile_c_l_d':
+    from models.RFB_Net_mobile_c_l_d import build_net
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 else:
-    print('Unkown version!')
+    assert AssertionError('ERROR::UNKNOWN VERSION')
 
 img_dim = (300,512)[args.size=='512']
 #rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']

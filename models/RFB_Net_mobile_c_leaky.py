@@ -150,38 +150,31 @@ class BasicRFB_a_e(nn.Module):
 
         self.branch0 = nn.Sequential(
                 BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1), # added
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1),
                 BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=1,relu=False)
                 )
         self.branch1 = nn.Sequential(
                 BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes, inter_planes, kernel_size=(3,1), stride=1, padding=(1,0)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
                 )
         self.branch2 = nn.Sequential(
                 BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
                 )
         self.branch3 = nn.Sequential(
                 BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes, inter_planes, kernel_size=(3,1), stride=1, padding=(1,0)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
                 )
         self.branch4 = nn.Sequential(
                 BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
                 )
         self.branch5 = nn.Sequential(
                 BasicConv(in_planes, inter_planes//2, kernel_size=1, stride=1),
-                BasicConv(inter_planes//2, inter_planes//2, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes//2, (inter_planes//4)*3, kernel_size=(1,3), stride=1, padding=(0,1)),
                 BasicConv((inter_planes//4)*3, inter_planes, kernel_size=(3,1), stride=stride, padding=(1,0)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=7, dilation=7, relu=False)
@@ -189,7 +182,6 @@ class BasicRFB_a_e(nn.Module):
 
         self.branch6 = nn.Sequential(
                 BasicConv(in_planes, inter_planes//2, kernel_size=1, stride=1),
-                BasicConv(inter_planes//2, inter_planes//2, kernel_size=1, stride=1), # added
                 BasicConv(inter_planes//2, (inter_planes//4)*3, kernel_size=(3,1), stride=1, padding=(1,0)),
                 BasicConv((inter_planes//4)*3, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
                 BasicConv(inter_planes, inter_planes, kernel_size=3, stride=1, padding=7, dilation=7, relu=False)
@@ -206,17 +198,6 @@ class BasicRFB_a_e(nn.Module):
         x4 = self.branch4(x)
         x5 = self.branch5(x)
         x6 = self.branch6(x)
-
-        '''
-        print('x0', x0.size())
-        print('x1', x1.size())
-        print('x2', x2.size())
-        print('x3', x3.size())
-        print('x4', x4.size())
-        print('x5', x5.size())
-        print('x6', x6.size())
-        sys.exit()
-        '''
 
         out = torch.cat((x0,x1,x2,x3,x4,x5,x6),1)
         out = self.ConvLinear(out)
@@ -265,13 +246,9 @@ class BasicRFB_a(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        #print('x0,1, 2, 3', x0.size(), x1.size(), x2.size(), x3.size())
         out = torch.cat((x0,x1,x2,x3),1)
-        #print('after concat', out.size())
         out = self.ConvLinear(out)
-        #print('after convlinear', out.size())
         out = out*self.scale + x
-        #print('after plus', out.size())
         out = self.relu(out)
         print('RFB_a: ', out.size())
 
@@ -482,18 +459,7 @@ def multibox(size, base, extra_layers, cfg, num_classes):
             conf_layers += [nn.Conv2d(v.out_channels, cfg[i]
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
-    '''
-    print('========base==========')
-    print(base)
-    print('=========extra=========')
-    print(extra_layers)
-    print('=========loc=========')
-    print(loc_layers)
-    print('=========conf=========')
-    print(conf_layers)
-    import sys
-    sys.exit()
-    '''
+
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {
@@ -523,8 +489,6 @@ def test():
     #out = net(inputs)
     print(net)
     #print(len(out))
-    #print('RFB_a:  torch.Size([32, 512, 19, 19])\n \
-#basicRFB:  torch.Size([32, 512, 5, 5]) ')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 

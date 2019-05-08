@@ -35,9 +35,7 @@ parser.add_argument('-m', '--trained_model', default='weights/RFB300_80_5.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='results/', type=str,
                     help='Dir to save results')
-#parser.add_argument('-sn', '--save_name', default='result.jpg', type=str,
-#                    help='Save file name')
-parser.add_argument('-th', '--threshold', default=0.40,
+parser.add_argument('-th', '--threshold', default=0.45,
                     type=float, help='Detection confidence threshold value')
 parser.add_argument('-t', '--type', dest='type', default='image', type=str,
             help='the type of the demo file, could be "image", "video", "camera"')
@@ -79,7 +77,7 @@ elif args.version == 'RFB_mobile_c_l_d':
     from models.RFB_Net_mobile_c_l_d import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 else:
-    AssertionError('ERROR::UNKNOWN VERSION')
+    assert AssertionError('ERROR::UNKNOWN VERSION')
 
 # color number book: http://www.n2n.pe.kr/lev-1/color.htm
 COLORS = [(255, 0, 0), (153, 255, 0), (0, 0, 255), (102, 0, 0)] # BGR

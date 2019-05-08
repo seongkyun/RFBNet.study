@@ -51,24 +51,18 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_custom':
     from models.RFB_Net_mobile_custom import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c_leaky':
     from models.RFB_Net_mobile_c_leaky import build_net
-    if args.dataset == 'COCO':
-        cfg = COCO_mobile_300
-    else:
-        cfg = VOC_mobile_300 
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'RFB_mobile_c_l_d':
+    from models.RFB_Net_mobile_c_l_d import build_net
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 else:
-    print('Unkown version!')
+    assert AssertionError('ERROR::UNKNOWN VERSION')
 
 priorbox = PriorBox(cfg)
 with torch.no_grad():
