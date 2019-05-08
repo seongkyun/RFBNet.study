@@ -19,7 +19,6 @@ pretrained
 
 # Experimental codes
 models/RFB_Net_mobile_custom_vggsize.py
-modi_train_RFB.py
 *.out
 *.jpg
 *.mp4
