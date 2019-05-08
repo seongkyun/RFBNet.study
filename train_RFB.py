@@ -165,13 +165,14 @@ with torch.no_grad():
     if args.cuda:
         priors = priors.cuda()
 
-
-
 def train():
     net.train()
 
-    summary(net, input_size=(3, 300, 300))
+    #summary(net, input_size=(3, 300, 300))
     #sys.exit()
+    save_dir = os.path.join(args.save_folder, args.version + '_' + args.dataset)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     # loss counters
     loc_loss = 0  # epoch
@@ -212,8 +213,10 @@ def train():
             loc_loss = 0
             conf_loss = 0
             if (epoch % 10 == 0 and epoch > 0) or (epoch % 5 ==0 and epoch > 200):
-                torch.save(net.state_dict(), args.save_folder+args.version+'_'+args.dataset + '_epoches_'+
-                           repr(epoch) + '.pth')
+                filedir = os.path.join(save_dir, 'epoches_'+ repr(epoch) + '.pth')
+                #torch.save(net.state_dict(), args.save_folder+args.version+'_'+args.dataset + '_epoches_'+
+                #           repr(epoch) + '.pth')
+                torch.save(net.state_dict(), filedir)
             epoch += 1
 
         load_t0 = time.time()
@@ -252,9 +255,8 @@ def train():
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(),loss_c.item()) + 
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
-    torch.save(net.state_dict(), args.save_folder +
-               'Final_' + args.version +'_' + args.dataset+ '.pth')
-
+    filedir = os.path.join(save_dir, 'Final_epoch.pth')
+    torch.save(net.state_dict(), filedir)
 
 def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
     """Sets the learning rate 

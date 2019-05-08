@@ -94,51 +94,6 @@ class BasicRFB_e(nn.Module):
 
         return out
 
-class BasicRFB(nn.Module):
-
-    def __init__(self, in_planes, out_planes, stride=1, scale = 0.1):
-        super(BasicRFB, self).__init__()
-        self.scale = scale
-        self.out_channels = out_planes
-        inter_planes = in_planes // 8
-        self.branch1 = nn.Sequential(
-                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, (inter_planes//2)*3, kernel_size=(1,3), stride=1, padding=(0,1)),
-                BasicConv((inter_planes//2)*3, (inter_planes//2)*3, kernel_size=(3,1), stride=stride, padding=(1,0)),
-                BasicSepConv((inter_planes//2)*3, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
-                )
-        self.branch2 = nn.Sequential(
-                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, (inter_planes//2)*3, kernel_size=3, stride=1, padding=1),
-                BasicConv((inter_planes//2)*3, (inter_planes//2)*3, kernel_size=3, stride=stride, padding=1),
-                BasicSepConv((inter_planes//2)*3, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
-                )
-
-        self.ConvLinear = BasicConv(3*inter_planes, out_planes, kernel_size=1, stride=1, relu=False)
-        if in_planes == out_planes:
-            self.identity = True
-        else:
-            self.identity = False
-            self.shortcut = BasicConv(in_planes, out_planes, kernel_size=1, stride=stride, relu=False)
-        self.relu = nn.LeakyReLU(inplace=False)
-
-    def forward(self,x):
-        x1 = self.branch1(x)
-        x2 = self.branch2(x)
-
-        out = torch.cat((x1,x2),1)
-        out = self.ConvLinear(out)
-        if self.identity:
-            out = out*self.scale + x
-        else:
-            short = self.shortcut(x)
-            out = out*self.scale + short
-        out = self.relu(out)
-
-        #print('basicRFB: ', out.size())
-
-        return out
-
 class BasicRFB_a_e(nn.Module):
 
     def __init__(self, in_planes, out_planes, stride=1, scale = 0.1):
@@ -207,73 +162,11 @@ class BasicRFB_a_e(nn.Module):
         x5 = self.branch5(x)
         x6 = self.branch6(x)
 
-        '''
-        print('x0', x0.size())
-        print('x1', x1.size())
-        print('x2', x2.size())
-        print('x3', x3.size())
-        print('x4', x4.size())
-        print('x5', x5.size())
-        print('x6', x6.size())
-        sys.exit()
-        '''
-
         out = torch.cat((x0,x1,x2,x3,x4,x5,x6),1)
         out = self.ConvLinear(out)
         short = self.shortcut(x)
         out = out*self.scale + short
         out = self.relu(out)
-
-        return out
-
-
-class BasicRFB_a(nn.Module):
-
-    def __init__(self, in_planes, out_planes, stride=1, scale = 0.1):
-        super(BasicRFB_a, self).__init__()
-        self.scale = scale
-        self.out_channels = out_planes
-        inter_planes = in_planes //4
-
-
-        self.branch0 = nn.Sequential(
-                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicSepConv(inter_planes, kernel_size=3, stride=1, padding=1, dilation=1, relu=False)
-                )
-        self.branch1 = nn.Sequential(
-                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=(3,1), stride=1, padding=(1,0)),
-                BasicSepConv(inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
-                )
-        self.branch2 = nn.Sequential(
-                BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
-                BasicConv(inter_planes, inter_planes, kernel_size=(1,3), stride=stride, padding=(0,1)),
-                BasicSepConv(inter_planes, kernel_size=3, stride=1, padding=3, dilation=3, relu=False)
-                )
-        self.branch3 = nn.Sequential(
-                BasicConv(in_planes, inter_planes//2, kernel_size=1, stride=1),
-                BasicConv(inter_planes//2, (inter_planes//4)*3, kernel_size=(1,3), stride=1, padding=(0,1)),
-                BasicConv((inter_planes//4)*3, inter_planes, kernel_size=(3,1), stride=stride, padding=(1,0)),
-                BasicSepConv(inter_planes, kernel_size=3, stride=1, padding=5, dilation=5, relu=False)
-                )
-
-        self.ConvLinear = BasicConv(4*inter_planes, out_planes, kernel_size=1, stride=1, relu=False)
-        self.relu = nn.LeakyReLU(inplace=False)
-
-    def forward(self,x):
-        x0 = self.branch0(x)
-        x1 = self.branch1(x)
-        x2 = self.branch2(x)
-        x3 = self.branch3(x)
-        #print('x0,1, 2, 3', x0.size(), x1.size(), x2.size(), x3.size())
-        out = torch.cat((x0,x1,x2,x3),1)
-        #print('after concat', out.size())
-        out = self.ConvLinear(out)
-        #print('after convlinear', out.size())
-        out = out*self.scale + x
-        #print('after plus', out.size())
-        out = self.relu(out)
-        print('RFB_a: ', out.size())
 
         return out
 
@@ -292,7 +185,6 @@ class RFBNet(nn.Module):
             return
 
         self.base = nn.ModuleList(base)
-        #self.Norm = BasicRFB_a(512,512,stride = 1,scale=1.0)
         self.Norm = BasicRFB_a_e(512,512,stride = 1,scale=1.0)
         self.extras = nn.ModuleList(extras)
 
@@ -327,11 +219,9 @@ class RFBNet(nn.Module):
         # apply vgg up to conv4_3 relu
         for k in range(12):
             x = self.base[k](x)
-        #print(x.size()) [batch_size(32), 512, 19, 19]
 
         s = self.Norm(x)
         sources.append(s)
-        #print(len(s)) batch_size(32)
 
         for k in range(12, len(self.base)):
             x = self.base[k](x)
@@ -345,20 +235,11 @@ class RFBNet(nn.Module):
 
         # apply multibox head to source layers
         for (x, l, c) in zip(sources, self.loc, self.conf):
-            #print(x.size())
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
 
-        #print([o.size() for o in loc])
-        #print([o.size() for o in conf])
-
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
-
-        #print('===========================')
-        #print([o.size() for o in loc])
-        #print([o.size() for o in conf])
-        #sys.exit()
 
         if self.phase == "test":
             output = (
@@ -428,10 +309,8 @@ def add_extras(size, cfg, i, batch_norm=False):
     for k, v in enumerate(cfg):
         if in_channels != 'S':
             if v == 'S':
-                #layers += [BasicRFB(in_channels, cfg[k+1], stride=2, scale = 1.0)]
                 layers += [BasicRFB_e(in_channels, cfg[k+1], stride=2, scale = 1.0)]
             else:
-                #layers += [BasicRFB(in_channels, v, scale = 1.0)]
                 layers += [BasicRFB_e(in_channels, v, scale = 1.0)]
         in_channels = v
     if size ==300:
@@ -482,18 +361,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
             conf_layers += [nn.Conv2d(v.out_channels, cfg[i]
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
-    '''
-    print('========base==========')
-    print(base)
-    print('=========extra=========')
-    print(extra_layers)
-    print('=========loc=========')
-    print(loc_layers)
-    print('=========conf=========')
-    print(conf_layers)
-    import sys
-    sys.exit()
-    '''
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {
@@ -515,17 +382,25 @@ def build_net(phase, size=300, num_classes=21):
 
 def test():
     net = build_net('train', 300, 21).cuda()
-    #net = build_net('train', 300, 21)
+    print(net)
     from torchsummary import summary
     summary(net, input_size=(3, 300, 300))
-    inputs = torch.randn(2, 3, 300, 300)
+    inputs = torch.randn(32, 3, 300, 300)
     out = net(inputs.cuda())
-    #out = net(inputs)
-    print(net)
-    #print(len(out))
-    #print('RFB_a:  torch.Size([32, 512, 19, 19])\n \
-#basicRFB:  torch.Size([32, 512, 5, 5]) ')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-test()
+#test()
+'''
+Total params: 10,976,800
+Trainable params: 10,976,800
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 1.03
+Forward/backward pass size (MB): 245.51
+Params size (MB): 41.87
+Estimated Total Size (MB): 288.42
+----------------------------------------------------------------
+coords output size:  torch.Size([32, 2990, 4])
+class output size:  torch.Size([32, 2990, 21])
+'''

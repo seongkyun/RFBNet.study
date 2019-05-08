@@ -479,17 +479,28 @@ def build_net(phase, size=300, num_classes=21):
                                 add_extras(size, extras[str(size)], 1024),
                                 mbox[str(size)], num_classes), num_classes)
 
+
 def test():
     net = build_net('train', 300, 21).cuda()
-    #net = build_net('train', 300, 21)
+    print(net)
     from torchsummary import summary
     summary(net, input_size=(3, 300, 300))
-    inputs = torch.randn(2, 3, 300, 300)
+    inputs = torch.randn(32, 3, 300, 300).cuda()
     out = net(inputs.cuda())
-    #out = net(inputs)
-    print(net)
-    #print(len(out))
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
 #test()
+'''
+Total params: 10,949,280
+Trainable params: 10,949,280
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 1.03
+Forward/backward pass size (MB): 240.58
+Params size (MB): 41.77
+Estimated Total Size (MB): 283.38
+----------------------------------------------------------------
+coords output size:  torch.Size([32, 2990, 4])
+class output size:  torch.Size([32, 2990, 21])
+'''

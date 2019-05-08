@@ -361,19 +361,28 @@ def build_net(phase, size=300, num_classes=21):
     return RFBNet(phase, size, *multibox(size, vgg(base[str(size)], 3),
                                 add_extras(size, extras[str(size)], 1024),
                                 mbox[str(size)], num_classes), num_classes)
+
 def test():
     net = build_net('train', 300, 21).cuda()
+    print(net)
     from torchsummary import summary
     summary(net, input_size=(3, 300, 300))
-    inputs = torch.randn(32, 3, 300, 300)
+    inputs = torch.randn(32, 3, 300, 300).cuda()
     out = net(inputs.cuda())
-    print(net)
-    #print(len(out))
-#    print('RFB_a:  torch.Size([32, 512, 38, 38])\n \
-#BasicRFB:  torch.Size([32, 1024, 19, 19])\n \
-#BasicRFB:  torch.Size([32, 512, 10, 10])\n \
-#BasicRFB:  torch.Size([32, 256, 5, 5])')
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-test()
+#test()
+'''
+Total params: 36,531,296
+Trainable params: 36,531,296
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 1.03
+Forward/backward pass size (MB): 566.72
+Params size (MB): 139.36
+Estimated Total Size (MB): 707.10
+----------------------------------------------------------------
+coords output size:  torch.Size([32, 11620, 4])
+class output size:  torch.Size([32, 11620, 21])
+'''
