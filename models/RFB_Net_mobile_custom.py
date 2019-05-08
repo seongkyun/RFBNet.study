@@ -509,4 +509,4 @@ def test():
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-test()
+#test()
