@@ -86,9 +86,9 @@ else:
 
 img_dim = (300,512)[args.size=='512']
 #rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
-rgb_means = (103.94,116.78,123.68)
+rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
 #p = (0.6,0.2)[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
-p = 0.2
+p = (0.2, 0.6)[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
 num_classes = (21, 81)[args.dataset == 'COCO']
 batch_size = args.batch_size
 weight_decay = 0.0005
@@ -224,7 +224,6 @@ def train():
             step_index += 1
         lr = adjust_learning_rate(optimizer, args.gamma, epoch, step_index, iteration, epoch_size)
 
-
         # load train data
         images, targets = next(batch_iterator)
         
@@ -251,10 +250,11 @@ def train():
         load_t1 = time.time()
         if iteration % 10 == 0:
             print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
-                  + '|| Totel iter ' +
+                  + '|| Total iter ' +
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(),loss_c.item()) + 
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
+            
     filedir = os.path.join(save_dir, 'Final_epoch.pth')
     torch.save(net.state_dict(), filedir)
 
