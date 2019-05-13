@@ -42,10 +42,18 @@ parser.add_argument('--cpu', default=True, type=bool,
                     help='Use cpu nms')
 args = parser.parse_args()
 
+# OS check
+import platform
+system_os = platform.system()
+if not system_os == 'Windows':
+    print('ERROR:: This code is for windows OS')
+    sys.exit()
+
 # Make result file saving folder
 if not os.path.exists(os.path.join(os.getcwd(), args.save_folder)):
     os.mkdir(os.path.join(os.getcwd(), args.save_folder))
 
+# Config hyper params
 VOC_300 = {
     'feature_maps' : [38, 19, 10, 5, 3, 1],
 
@@ -156,6 +164,7 @@ COCO_mobile_300 = {
     'clip' : True,
 }
 
+# Define label map
 COCO_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                 'train', 'truck', 'boat', 'traffic light', 'fire', 'hydrant',
                 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
@@ -178,18 +187,6 @@ VOC_CLASSES = ( '__background__', # always index 0
     'cow', 'diningtable', 'dog', 'horse',
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor')
-
-# Label settings
-'''
-if args.dataset == 'VOC':
-    cfg = (VOC_300, VOC_512)[args.size == '512']
-    from data.voc0712 import VOC_CLASSES
-    labels = VOC_CLASSES
-else:
-    cfg = (COCO_300, COCO_512)[args.size == '512']
-    from data.coco import COCO_CLASSES
-    labels = COCO_CLASSES
-'''
 
 if args.dataset == 'VOC':
     cfg = (VOC_300, VOC_512)[args.size == '512']
