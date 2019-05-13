@@ -56,111 +56,68 @@ if not os.path.exists(os.path.join(os.getcwd(), args.save_folder)):
 # Config hyper params
 VOC_300 = {
     'feature_maps' : [38, 19, 10, 5, 3, 1],
-
     'min_dim' : 300,
-
     'steps' : [8, 16, 32, 64, 100, 300],
-
     'min_sizes' : [30, 60, 111, 162, 213, 264],
-
     'max_sizes' : [60, 111, 162, 213, 264, 315],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
 VOC_mobile_300 = {
     'feature_maps' : [19, 10, 5, 3, 2, 1],
-    #'feature_maps' : [38, 19, 10, 5, 3, 1],
-
     'min_dim' : 300,
-
     'steps' : [16, 32, 64, 100, 150, 300],
-
     'min_sizes' : [45, 90, 135, 180, 225, 270],
-
     'max_sizes' : [90, 135, 180, 225, 270, 315],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
 VOC_512= {
     'feature_maps' : [64, 32, 16, 8, 4, 2, 1],
-
     'min_dim' : 512,
-
     'steps' : [8, 16, 32, 64, 128, 256, 512],
-
     'min_sizes'  : [35.84, 76.8, 153.6, 230.4, 307.2, 384.0, 460.8 ],
-
     'max_sizes'  : [76.8, 153.6, 230.4, 307.2, 384.0, 460.8, 537.6],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2,3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
 
 COCO_300 = {
     'feature_maps' : [38, 19, 10, 5, 3, 1],
-
     'min_dim' : 300,
-
     'steps' : [8, 16, 32, 64, 100, 300],
-
     'min_sizes' : [21, 45, 99, 153, 207, 261],
-
     'max_sizes' : [45, 99, 153, 207, 261, 315],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
 COCO_512= {
     'feature_maps' : [64, 32, 16, 8, 4, 2, 1],
-
     'min_dim' : 512,
-
     'steps' : [8, 16, 32, 64, 128, 256, 512],
-
     'min_sizes' : [20.48, 51.2, 133.12, 215.04, 296.96, 378.88, 460.8],
-
     'max_sizes' : [51.2, 133.12, 215.04, 296.96, 378.88, 460.8, 542.72],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2,3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
 COCO_mobile_300 = {
     'feature_maps' : [19, 10, 5, 3, 2, 1],
-
     'min_dim' : 300,
-
     'steps' : [16, 32, 64, 100, 150, 300],
-
     'min_sizes' : [45, 90, 135, 180, 225, 270],
-
     'max_sizes' : [90, 135, 180, 225, 270, 315],
-
     'aspect_ratios' : [[2,3], [2, 3], [2, 3], [2, 3], [2], [2]],
-
     'variance' : [0.1, 0.2],
-
     'clip' : True,
 }
 
@@ -225,6 +182,37 @@ with torch.no_grad():
     priors = priorbox.forward()
     if args.cuda:
         priors = priors.cuda()
+        
+class BaseTransform(object):
+    """Defines the transformations that should be applied to test PIL image
+        for input into the network
+
+    dimension -> tensorize -> color adj
+
+    Arguments:
+        resize (int): input dimension to SSD
+        rgb_means ((int,int,int)): average RGB of the dataset
+            (104,117,123)
+        swap ((int,int,int)): final order of channels
+    Returns:
+        transform (transform) : callable transform to be applied to test/val
+        data
+    """
+    def __init__(self, resize, rgb_means, swap=(2, 0, 1)):
+        self.means = rgb_means
+        self.resize = resize
+        self.swap = swap
+
+    # assume input is cv2 img for now
+    def __call__(self, img):
+
+        interp_methods = [cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_NEAREST, cv2.INTER_LANCZOS4]
+        interp_method = interp_methods[0]
+        img = cv2.resize(np.array(img), (self.resize,
+                                         self.resize),interpolation = interp_method).astype(np.float32)
+        img -= self.means
+        img = img.transpose(self.swap)
+        return torch.from_numpy(img)
 
 def nms_py(dets, thresh):
     x1 = dets[:, 0]
@@ -263,37 +251,6 @@ def nms_py(dets, thresh):
             if ovr >= thresh:
                 suppressed[j] = 1
     return keep
-
-class BaseTransform(object):
-    """Defines the transformations that should be applied to test PIL image
-        for input into the network
-
-    dimension -> tensorize -> color adj
-
-    Arguments:
-        resize (int): input dimension to SSD
-        rgb_means ((int,int,int)): average RGB of the dataset
-            (104,117,123)
-        swap ((int,int,int)): final order of channels
-    Returns:
-        transform (transform) : callable transform to be applied to test/val
-        data
-    """
-    def __init__(self, resize, rgb_means, swap=(2, 0, 1)):
-        self.means = rgb_means
-        self.resize = resize
-        self.swap = swap
-
-    # assume input is cv2 img for now
-    def __call__(self, img):
-
-        interp_methods = [cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_NEAREST, cv2.INTER_LANCZOS4]
-        interp_method = interp_methods[0]
-        img = cv2.resize(np.array(img), (self.resize,
-                                         self.resize),interpolation = interp_method).astype(np.float32)
-        img -= self.means
-        img = img.transpose(self.swap)
-        return torch.from_numpy(img)
 
 def demo_img(net, detector, transform, img, save_dir):
     _t = {'inference': Timer(), 'misc': Timer()}
