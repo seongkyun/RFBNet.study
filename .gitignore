@@ -26,5 +26,6 @@ models/RFB_Net_mobile_custom_vggsize.py
 
 # Demo files
 demofiles
+results
 *.jpg
 *.mp4

@@ -7,7 +7,7 @@ import torchvision.models as models
 import torch.backends.cudnn as cudnn
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname('/home/han/study/RFBNet/layers/'))))
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from layers import *
 
 class BasicConv(nn.Module):
