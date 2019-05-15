@@ -380,13 +380,18 @@ def build_net(phase, size=300, num_classes=21):
                                 add_extras(size, extras[str(size)], 1024),
                                 mbox[str(size)], num_classes), num_classes)
 
-def test():
-    net = build_net('train', 300, 21).cuda()
+def test(device=None):
+    if device == "cpu":
+        print('CPU mode')
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
+    net = build_net('train', 300, 21).to(device)
     print(net)
     from torchsummary import summary
-    summary(net, input_size=(3, 300, 300))
+    summary(net, input_size=(3, 300, 300), device=str(device))
     inputs = torch.randn(32, 3, 300, 300)
-    out = net(inputs.cuda())
+    out = net(inputs.to(device))
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 

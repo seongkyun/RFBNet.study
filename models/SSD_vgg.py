@@ -7,36 +7,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from layers import *
 
-'''
-from torch.autograd import Function
-from torch.autograd import Variable
-import torch.nn.init as init
-
-class L2Norm(nn.Module):
-    def __init__(self,n_channels, scale):
-        super(L2Norm,self).__init__()
-        self.n_channels = n_channels
-        self.gamma = scale or None
-        self.eps = 1e-10
-        self.weight = nn.Parameter(torch.Tensor(self.n_channels))
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        init.constant(self.weight,self.gamma)
-
-    def forward(self, x):
-        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt()+self.eps
-        x /= norm
-        out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
-        return out
-'''
-
-a = L2Norm()
-print(a)
-sys.exit()
-
-
-
 def vgg(cfg, i, batch_norm=False):
     layers = []
     in_channels = i
@@ -226,27 +196,20 @@ def build_net(phase, size=300, num_classes=21):
     return SSD(phase, *multibox(vgg(vgg_base[str(size)], 3),
                          add_extras(extras[str(size)], 1024, size=size),
                          mbox[str(size)], num_classes), num_classes=num_classes,size=size)
-def test():
-    net = build_net('train', 300, 21).cuda()
-    print(net)
-    from torchsummary import summary
-    summary(net, input_size=(3, 300, 300))
-    inputs = torch.randn(32, 3, 300, 300).cuda()
-    out = net(inputs.cuda())
-    print('coords output size: ', out[0].size())
-    print('class output size: ', out[1].size())
 
-def test_cpu():
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
-    device = torch.device("cpu")
+def test(device=None):
+    if device == "cpu":
+        print('CPU mode')
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
     net = build_net('train', 300, 21).to(device)
     print(net)
-    #from torchsummary import summary
-    #summary(net, input_size=(3, 300, 300))
+    from torchsummary import summary
+    summary(net, input_size=(3, 300, 300), device=str(device))
     inputs = torch.randn(32, 3, 300, 300)
-    out = net(inputs)
+    out = net(inputs.to(device))
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-#test()
-#test_cpu()
+test("cpu")
