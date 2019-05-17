@@ -84,6 +84,9 @@ elif args.version == 'RFB_mobile_c_leaky':
 elif args.version == 'RFB_mobile_c_l_d':
     from models.RFB_Net_mobile_c_l_d import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'RFB_mobile_c2':
+    from models.RFB_Net_mobile_c2 import build_net
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 else:
     assert AssertionError('ERROR::UNKNOWN VERSION')
 
