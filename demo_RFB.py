@@ -100,7 +100,7 @@ def demo_img(net, detector, transform, img, save_dir):
             x = x.cuda()
             scale = scale.cuda()
     _t['inference'].tic()
-    out = net(x)      # forward pass
+    out = net(x)      # forward pass 
     boxes, scores = detector.forward(out,priors)
     inference_time = _t['inference'].toc()
     boxes = boxes[0]

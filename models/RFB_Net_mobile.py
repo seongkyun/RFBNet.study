@@ -201,20 +201,11 @@ class RFBNet(nn.Module):
 
         # apply multibox head to source layers
         for (x, l, c) in zip(sources, self.loc, self.conf):
-            #print(x.size())
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
 
-        #print([o.size() for o in loc])
-        #print([o.size() for o in conf])
-
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
-
-        #print('===========================')
-        #print([o.size() for o in loc])
-        #print([o.size() for o in conf])
-        #sys.exit()
 
         if self.phase == "test":
             output = (
@@ -381,7 +372,7 @@ def test(device=None):
     out = net(inputs.to(device))
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
-#test()
+test("cpu")
 '''
 Total params: 6,754,208
 Trainable params: 6,754,208

@@ -88,9 +88,7 @@ else:
     assert AssertionError('ERROR::UNKNOWN VERSION')
 
 img_dim = (300,512)[args.size=='512']
-#rgb_means = ((104, 117, 123),(103.94,116.78,123.68))[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
 rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
-#p = (0.6,0.2)[args.version == 'RFB_mobile' or args.version == 'RFB_mobile_custom' or args.version == 'RFB_mobile_c_leaky']
 p = (0.2, 0.6)[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
 num_classes = (21, 81)[args.dataset == 'COCO']
 batch_size = args.batch_size

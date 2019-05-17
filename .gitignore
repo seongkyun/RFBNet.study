@@ -22,7 +22,7 @@ eval
 *.out
 
 # Experimental codes
-models/RFB_Net_mobile_custom_vggsize.py
+models/SSD_mobile.py
 
 # Demo files
 demofiles
