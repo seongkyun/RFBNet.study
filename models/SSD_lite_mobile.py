@@ -268,6 +268,9 @@ def build_ssd_lite(phase, base, feature_layer, mbox, num_classes):
     base_, extras_, head_ = add_extras(base(), feature_layer, mbox, num_classes)
     return SSDLite(phase, base_, extras_, head_, feature_layer, num_classes)
 
+ASPECT_RATIOS = [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
+number_box= [2*len(aspect_ratios) if isinstance(aspect_ratios[0], int) else len(aspect_ratios) for aspect_ratios in ASPECT_RATIOS]  
+
 def build_net_mbv1(phase, size=300, num_classes=21):
     if phase != "test" and phase != "train":
         print("Error: Phase not recognized")
@@ -276,10 +279,8 @@ def build_net_mbv1(phase, size=300, num_classes=21):
         print("Error: Currently SSD300 models are supported!")
         return
     base = mobilenet_v1
-    ASPECT_RATIOS = [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
     FEATURE_LAYER = [[11, 13, 'S', 'S', 'S', 'S'], [512, 1024, 512, 256, 256, 128]]
 
-    number_box= [2*len(aspect_ratios) if isinstance(aspect_ratios[0], int) else len(aspect_ratios) for aspect_ratios in ASPECT_RATIOS]  
     model = build_ssd_lite(phase=phase, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
 
     return model
@@ -292,30 +293,35 @@ def build_net_mbv2(phase, size=300, num_classes=21):
         print("Error: Currently SSD300 models are supported!")
         return
     base = mobilenet_v2
-    ASPECT_RATIOS = [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
     FEATURE_LAYER = [[13, 17, 'S', 'S', 'S', 'S'], [96, 320, 512, 256, 256, 128]]
 
-    number_box= [2*len(aspect_ratios) if isinstance(aspect_ratios[0], int) else len(aspect_ratios) for aspect_ratios in ASPECT_RATIOS]  
     model = build_ssd_lite(phase=phase, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
 
     return model
 
-def test(device=None):
+def test(device=None, version="mobilenet_v1"):
     if device == "cpu":
         print('CPU mode')
         device = torch.device("cpu")
     else:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
-    net = build_net_mbv2('train', 300, 21).to(device)
+    if version == "mobilenet_v1":
+        modelname = "MobileNet V1"
+        net = build_net_mbv1('train', 300, 21).to(device)
+    else:
+        modelname = "MobileNet V2"
+        net = build_net_mbv2('train', 300, 21).to(device)
+
     print(net)
     from torchsummary import summary
     summary(net, input_size=(3, 300, 300), device=str(device))
     inputs = torch.randn(32, 3, 300, 300)
     out = net(inputs.to(device))
+    print("Result of ", modelname)
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-#test("cpu")
+test("cpu", "mobilenet_v1")
 
 '''
 ======Results for SSD lite mobilenet v1======

@@ -24,7 +24,7 @@ summary = SummaryWriter()
 parser = argparse.ArgumentParser(
     description='Receptive Field Block Net Training')
 parser.add_argument('-v', '--version', default='RFB_vgg',
-                    help='RFB_vgg ,RFB_E_vgg or RFB_mobile version.')
+                    help='Choose the version.')
 parser.add_argument('-s', '--size', default='300',
                     help='300 or 512 input size.')
 parser.add_argument('-d', '--dataset', default='VOC',
@@ -75,18 +75,28 @@ elif args.version == 'RFB_E_vgg':
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_custom':
-    from models.RFB_Net_mobile_custom import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c_leaky':
-    from models.RFB_Net_mobile_c_leaky import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c_l_d':
-    from models.RFB_Net_mobile_c_l_d import build_net
+elif args.version == 'RFB_mobile_c1':
+    from models.RFB_Net_mobile_c1 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c2':
     from models.RFB_Net_mobile_c2 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'SSD_lite_mobile_v1':
+    from models.SSD_lite_mobile import build_net_mbv1
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'SSD_lite_mobile_v2':
+    from models.SSD_lite_mobile import build_net_mbv2
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+
+elif args.version == 'RFB_mobile_c_leaky':
+    print('WARNING::TESTING METHOD')
+    from models.RFB_Net_mobile_c_leaky import build_net
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'RFB_mobile_c_l_d':
+    print('WARNING::TESTING METHOD')
+    from models.RFB_Net_mobile_c_l_d import build_net
+    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+
 else:
     assert AssertionError('ERROR::UNKNOWN VERSION')
 
