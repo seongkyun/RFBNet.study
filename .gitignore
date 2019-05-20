@@ -22,7 +22,7 @@ eval
 *.out
 
 # Experimental codes
-#models/SSD_*
+models/SSD_vgg.py.old
 
 # Demo files
 demofiles

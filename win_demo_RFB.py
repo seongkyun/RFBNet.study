@@ -121,6 +121,28 @@ COCO_mobile_300 = {
     'clip' : True,
 }
 
+VOC_SSDVGG_300 = {
+    'feature_maps': [38, 19, 10, 5, 3, 1],
+    'min_dim': 300,
+    'steps': [8, 16, 32, 64, 100, 300],
+    'min_sizes': [30, 60, 111, 162, 213, 264],
+    'max_sizes': [60, 111, 162, 213, 264, 315],
+    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+}
+
+COCO_SSDVGG_300 = {
+    'feature_maps': [38, 19, 10, 5, 3, 1],
+    'min_dim': 300,
+    'steps': [8, 16, 32, 64, 100, 300],
+    'min_sizes': [21, 45, 99, 153, 207, 261],
+    'max_sizes': [45, 99, 153, 207, 261, 315],
+    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+}
+
 # Define label map
 COCO_CLASSES = ('person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                 'train', 'truck', 'boat', 'traffic light', 'fire', 'hydrant',
@@ -166,13 +188,15 @@ elif args.version == 'RFB_mobile_c1':
 elif args.version == 'RFB_mobile_c2':
     from models.RFB_Net_mobile_c2 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'SSD_vgg':
+    from models.SSD_vgg import build_net
+    cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v1':
-    from models.SSD_lite_mobile import build_net_mbv1
+    from models.SSD_lite_mobile import build_net_mbv1 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v2':
-    from models.SSD_lite_mobile import build_net_mbv2
+    from models.SSD_lite_mobile import build_net_mbv2 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-
 elif args.version == 'RFB_mobile_c_leaky':
     print('WARNING::TESTING METHOD')
     from models.RFB_Net_mobile_c_leaky import build_net
@@ -183,7 +207,9 @@ elif args.version == 'RFB_mobile_c_l_d':
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 
 else:
-    assert AssertionError('ERROR::UNKNOWN VERSION')
+    print('ERROR::UNKNOWN VERSION')
+    sys.exit()
+
 
 # color number book: http://www.n2n.pe.kr/lev-1/color.htm
 COLORS = [(255, 0, 0), (153, 255, 0), (0, 0, 255), (102, 0, 0)] # BGR

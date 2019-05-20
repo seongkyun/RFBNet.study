@@ -11,12 +11,11 @@ import argparse
 import numpy as np
 from torch.autograd import Variable
 import torch.utils.data as data
-from data import VOCroot, COCOroot, VOC_300, VOC_512, VOC_mobile_300, COCO_300, COCO_512, COCO_mobile_300, AnnotationTransform, COCODetection, VOCDetection, detection_collate, BaseTransform, preproc
+from data import *
 from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
 import time
 import sys
-#from torchsummary import summary
 
 from tensorboardX import SummaryWriter
 summary = SummaryWriter()
@@ -81,13 +80,15 @@ elif args.version == 'RFB_mobile_c1':
 elif args.version == 'RFB_mobile_c2':
     from models.RFB_Net_mobile_c2 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'SSD_vgg':
+    from models.SSD_vgg import build_net
+    cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v1':
-    from models.SSD_lite_mobile import build_net_mbv1
+    from models.SSD_lite_mobile import build_net_mbv1 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v2':
-    from models.SSD_lite_mobile import build_net_mbv2
+    from models.SSD_lite_mobile import build_net_mbv2 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-
 elif args.version == 'RFB_mobile_c_leaky':
     print('WARNING::TESTING METHOD')
     from models.RFB_Net_mobile_c_leaky import build_net
@@ -98,7 +99,8 @@ elif args.version == 'RFB_mobile_c_l_d':
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 
 else:
-    assert AssertionError('ERROR::UNKNOWN VERSION')
+    print('ERROR::UNKNOWN VERSION')
+    sys.exit()
 
 img_dim = (300,512)[args.size=='512']
 rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
@@ -252,10 +254,12 @@ def train():
         # forward
         t0 = time.time()
         out = net(images)
+
         # backprop
         optimizer.zero_grad()
         loss_l, loss_c = criterion(out, priors, targets)
         loss = loss_l + loss_c
+                
         loss.backward()
         optimizer.step()
         t1 = time.time()

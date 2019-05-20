@@ -154,7 +154,7 @@ class SSDLite(nn.Module):
         self.num_classes = num_classes
         # SSD network
         self.base = nn.ModuleList(base)
-        self.norm = L2Norm(feature_layer[1][0], 20)
+        self.Norm = L2Norm(feature_layer[1][0], 20)
         self.extras = nn.ModuleList(extras)
 
         self.loc = nn.ModuleList(head[0])
@@ -163,7 +163,6 @@ class SSDLite(nn.Module):
             self.softmax = nn.Softmax(dim=-1)
 
         self.feature_layer = feature_layer[0]
-        
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -195,7 +194,7 @@ class SSDLite(nn.Module):
             x = self.base[k](x)
             if k in self.feature_layer:
                 if len(sources) == 0:
-                    s = self.norm(x)
+                    s = self.Norm(x)
                     sources.append(s)
                 else:
                     sources.append(x)
@@ -321,7 +320,7 @@ def test(device=None, version="mobilenet_v1"):
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-test("cpu", "mobilenet_v1")
+#test("cpu", "mobilenet_v1")
 
 '''
 ======Results for SSD lite mobilenet v1======

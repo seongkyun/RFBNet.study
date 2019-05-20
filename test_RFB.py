@@ -9,9 +9,9 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import numpy as np
 from torch.autograd import Variable
-from data import VOCroot,COCOroot 
-from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300,VOC_512,COCO_300,COCO_512, COCO_mobile_300, VOC_mobile_300
-
+#from data import VOCroot,COCOroot 
+#from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300,VOC_512,COCO_300,COCO_512, COCO_mobile_300, VOC_mobile_300
+from data import *
 import torch.utils.data as data
 from layers.functions import Detect,PriorBox
 from utils.nms_wrapper import nms
@@ -58,13 +58,15 @@ elif args.version == 'RFB_mobile_c1':
 elif args.version == 'RFB_mobile_c2':
     from models.RFB_Net_mobile_c2 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+elif args.version == 'SSD_vgg':
+    from models.SSD_vgg import build_net
+    cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v1':
-    from models.SSD_lite_mobile import build_net_mbv1
+    from models.SSD_lite_mobile import build_net_mbv1 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v2':
-    from models.SSD_lite_mobile import build_net_mbv2
+    from models.SSD_lite_mobile import build_net_mbv2 as build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-
 elif args.version == 'RFB_mobile_c_leaky':
     print('WARNING::TESTING METHOD')
     from models.RFB_Net_mobile_c_leaky import build_net
@@ -75,7 +77,9 @@ elif args.version == 'RFB_mobile_c_l_d':
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 
 else:
-    assert AssertionError('ERROR::UNKNOWN VERSION')
+    print('ERROR::UNKNOWN VERSION')
+    sys.exit()
+
 
 priorbox = PriorBox(cfg)
 with torch.no_grad():

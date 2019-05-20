@@ -360,7 +360,7 @@ def test(device=None):
     out = net(inputs.to(device))
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
-test("cpu")
+#test("cpu")
 '''
 Total params: 6,754,208
 Trainable params: 6,754,208

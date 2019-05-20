@@ -150,7 +150,7 @@ class RFBNet(nn.Module):
         elif size == 512:
             self.indicator = 5
         else:
-            print("Error: Sorry only SSD300 and SSD512 are supported!")
+            print("Error: Sorry only RFB300 and RFB512 are supported!")
             return
         # vgg network
         self.base = nn.ModuleList(base)
