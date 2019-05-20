@@ -22,7 +22,7 @@ eval
 *.out
 
 # Experimental codes
-models/SSD_mobile.py
+#models/SSD_*
 
 # Demo files
 demofiles

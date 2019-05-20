@@ -327,18 +327,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
             conf_layers += [nn.Conv2d(v.out_channels, cfg[i]
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
-    '''
-    print('========base==========')
-    print(base)
-    print('=========extra=========')
-    print(extra_layers)
-    print('=========loc=========')
-    print(loc_layers)
-    print('=========conf=========')
-    print(conf_layers)
-    import sys
-    sys.exit()
-    '''
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {
