@@ -12,127 +12,42 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from layers import *
 
-Conv = namedtuple('Conv', ['stride', 'depth'])
-DepthSepConv = namedtuple('DepthSepConv', ['stride', 'depth'])
-InvertedResidual = namedtuple('InvertedResidual', ['stride', 'depth', 'num', 't']) # t is the expension factor
-
-V1_CONV_DEFS = [
-    Conv(stride=2, depth=32),
-    DepthSepConv(stride=1, depth=64),
-    DepthSepConv(stride=2, depth=128),
-    DepthSepConv(stride=1, depth=128),
-    DepthSepConv(stride=2, depth=256),
-    DepthSepConv(stride=1, depth=256),
-    DepthSepConv(stride=2, depth=512),
-    DepthSepConv(stride=1, depth=512),
-    DepthSepConv(stride=1, depth=512),
-    DepthSepConv(stride=1, depth=512),
-    DepthSepConv(stride=1, depth=512),
-    DepthSepConv(stride=1, depth=512),
-    DepthSepConv(stride=2, depth=1024),
-    DepthSepConv(stride=1, depth=1024)
-]
-
-V2_CONV_DEFS = [
-    Conv(stride=2, depth=32),
-    InvertedResidual(stride=1, depth=16, num=1, t=1),
-    InvertedResidual(stride=2, depth=24, num=2, t=6),
-    InvertedResidual(stride=2, depth=32, num=3, t=6),
-    InvertedResidual(stride=2, depth=64, num=4, t=6),
-    InvertedResidual(stride=1, depth=96, num=3, t=6),
-    InvertedResidual(stride=2, depth=160, num=3, t=6),
-    InvertedResidual(stride=1, depth=320, num=1, t=6),
-]
-
-class _conv_bn_m(nn.Module):
-    def __init__(self, inp, oup, stride):
-        super(_conv_bn_m, self).__init__()
-        self.conv = nn.Sequential(
+def conv_bn(inp,oup,stride):
+    return nn.Sequential(
             nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
             nn.BatchNorm2d(oup),
-            nn.ReLU(inplace=True),
-        )
-        self.depth = oup
+            nn.ReLU(inplace=True)
+    )
 
-    def forward(self, x):
-        return self.conv(x)
-
-
-class _conv_dw_m(nn.Module):
-    def __init__(self, inp, oup, stride):
-        super(_conv_dw_m, self).__init__()
-        self.conv = nn.Sequential(
-            # dw
-            nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
+def conv_dw(inp, oup, stride):
+    return nn.Sequential(
+            nn.Conv2d(inp,inp, kernel_size=3, stride=stride, padding=1,groups = inp, bias=False),
             nn.BatchNorm2d(inp),
             nn.ReLU(inplace=True),
-            # pw
+
             nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
             nn.BatchNorm2d(oup),
             nn.ReLU(inplace=True),
-        )
-        self.depth = oup
+    )
 
-    def forward(self, x):
-        return self.conv(x)
-
-class _inverted_residual_bottleneck(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio):
-        super(_inverted_residual_bottleneck, self).__init__()
-        self.use_res_connect = stride == 1 and inp == oup
-        self.conv = nn.Sequential(
-            # pw
-            nn.Conv2d(inp, inp * expand_ratio, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
-            nn.ReLU6(inplace=True),
-            # dw
-            nn.Conv2d(inp * expand_ratio, inp * expand_ratio, 3, stride, 1, groups=inp * expand_ratio, bias=False),
-            nn.BatchNorm2d(inp * expand_ratio),
-            nn.ReLU6(inplace=True),
-            # pw-linear
-            nn.Conv2d(inp * expand_ratio, oup, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(oup),
-        )
-        self.depth = oup
-        
-    def forward(self, x):
-        if self.use_res_connect:
-            return x + self.conv(x)
-        else:
-            return self.conv(x)
-
-def mobilenet(conv_defs, depth_multiplier=1.0, min_depth=8):
-    depth = lambda d: max(int(d * depth_multiplier), min_depth)
+def MobileNet():
     layers = []
-    in_channels = 3
-    for conv_def in conv_defs:
-        if isinstance(conv_def, Conv):
-            layers += [_conv_bn_m(in_channels, depth(conv_def.depth), conv_def.stride)]
-            in_channels = depth(conv_def.depth)
-        elif isinstance(conv_def, DepthSepConv):
-            layers += [_conv_dw_m(in_channels, depth(conv_def.depth), conv_def.stride)]
-            in_channels = depth(conv_def.depth)
-        elif isinstance(conv_def, InvertedResidual):
-          for n in range(conv_def.num):
-            stride = conv_def.stride if n == 0 else 1
-            layers += [_inverted_residual_bottleneck(in_channels, depth(conv_def.depth), stride, conv_def.t)]
-            in_channels = depth(conv_def.depth)
+    layers += [conv_bn(3, 32, 2)]
+    layers += [conv_dw(32, 64, 1)]
+    layers += [conv_dw(64, 128, 2)]
+    layers += [conv_dw(128, 128, 1)]
+    layers += [conv_dw(128, 256, 2)]
+    layers += [conv_dw(256, 256, 1)]
+    layers += [conv_dw(256, 512, 2)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 512, 1)]
+    layers += [conv_dw(512, 1024, 2)]
+    layers += [conv_dw(1024, 1024, 1)]
+
     return layers
-
-def wrapped_partial(func, *args, **kwargs):
-    partial_func = functools.partial(func, *args, **kwargs)
-    functools.update_wrapper(partial_func, func)
-    return partial_func
-
-mobilenet_v1 = wrapped_partial(mobilenet, conv_defs=V1_CONV_DEFS, depth_multiplier=1.0)
-mobilenet_v1_075 = wrapped_partial(mobilenet, conv_defs=V1_CONV_DEFS, depth_multiplier=0.75)
-mobilenet_v1_050 = wrapped_partial(mobilenet, conv_defs=V1_CONV_DEFS, depth_multiplier=0.50)
-mobilenet_v1_025 = wrapped_partial(mobilenet, conv_defs=V1_CONV_DEFS, depth_multiplier=0.25)
-
-mobilenet_v2 = wrapped_partial(mobilenet, conv_defs=V2_CONV_DEFS, depth_multiplier=1.0)
-mobilenet_v2_075 = wrapped_partial(mobilenet, conv_defs=V2_CONV_DEFS, depth_multiplier=0.75)
-mobilenet_v2_050 = wrapped_partial(mobilenet, conv_defs=V2_CONV_DEFS, depth_multiplier=0.50)
-mobilenet_v2_025 = wrapped_partial(mobilenet, conv_defs=V2_CONV_DEFS, depth_multiplier=0.25)
 
 class SSDLite(nn.Module):
     """Single Shot Multibox Architecture for embeded system
@@ -264,63 +179,42 @@ def _conv_dw(inp, oup, stride=1, padding=0, expand_ratio=1):
     )
 
 def build_ssd_lite(phase, base, feature_layer, mbox, num_classes):
-    base_, extras_, head_ = add_extras(base(), feature_layer, mbox, num_classes)
+    base_, extras_, head_ = add_extras(base, feature_layer, mbox, num_classes)
     return SSDLite(phase, base_, extras_, head_, feature_layer, num_classes)
 
 ASPECT_RATIOS = [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
 number_box= [2*len(aspect_ratios) if isinstance(aspect_ratios[0], int) else len(aspect_ratios) for aspect_ratios in ASPECT_RATIOS]  
 
-def build_net_mbv1(phase, size=300, num_classes=21):
+def build_net(phase, size=300, num_classes=21):
     if phase != "test" and phase != "train":
         print("Error: Phase not recognized")
         return
     if size != 300:
         print("Error: Currently SSD300 models are supported!")
         return
-    base = mobilenet_v1
+    base = MobileNet()
     FEATURE_LAYER = [[11, 13, 'S', 'S', 'S', 'S'], [512, 1024, 512, 256, 256, 128]]
 
     model = build_ssd_lite(phase=phase, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
 
     return model
 
-def build_net_mbv2(phase, size=300, num_classes=21):
-    if phase != "test" and phase != "train":
-        print("Error: Phase not recognized")
-        return
-    if size != 300:
-        print("Error: Currently SSD300 models are supported!")
-        return
-    base = mobilenet_v2
-    FEATURE_LAYER = [[13, 17, 'S', 'S', 'S', 'S'], [96, 320, 512, 256, 256, 128]]
-
-    model = build_ssd_lite(phase=phase, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
-
-    return model
-
-def test(device=None, version="mobilenet_v1"):
+def test(device=None):
     if device == "cpu":
         print('CPU mode')
         device = torch.device("cpu")
     else:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
-    if version == "mobilenet_v1":
-        modelname = "MobileNet V1"
-        net = build_net_mbv1('train', 300, 21).to(device)
-    else:
-        modelname = "MobileNet V2"
-        net = build_net_mbv2('train', 300, 21).to(device)
-
+    net = build_net('train', 300, 21).to(device)
     print(net)
     from torchsummary import summary
     summary(net, input_size=(3, 300, 300), device=str(device))
     inputs = torch.randn(32, 3, 300, 300)
     out = net(inputs.to(device))
-    print("Result of ", modelname)
     print('coords output size: ', out[0].size())
     print('class output size: ', out[1].size())
 
-#test("cpu", "mobilenet_v1")
+#test("cpu")
 
 '''
 ======Results for SSD lite mobilenet v1======

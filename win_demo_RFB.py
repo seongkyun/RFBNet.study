@@ -192,10 +192,10 @@ elif args.version == 'SSD_vgg':
     from models.SSD_vgg import build_net
     cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v1':
-    from models.SSD_lite_mobile import build_net_mbv1 as build_net
+    from models.SSD_lite_mobilenet_v1 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_lite_mobile_v2':
-    from models.SSD_lite_mobile import build_net_mbv2 as build_net
+    from models.SSD_lite_mobilenet_v2 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'RFB_mobile_c_leaky':
     print('WARNING::TESTING METHOD')
