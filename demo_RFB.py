@@ -174,14 +174,14 @@ def demo_stream(net, detector, transform, video, save_dir):
                 scale = scale.cuda()
         _t['inference'].tic()
         out = net(x)      # forward pass
-        boxes, scores = detector.forward(out,priors)
         inference_time = _t['inference'].toc()
+        boxes, scores = detector.forward(out,priors)
+        _t['misc'].tic()
         boxes = boxes[0]
         scores = scores[0]
         boxes *= scale
         boxes = boxes.cpu().numpy()
         scores = scores.cpu().numpy()
-        _t['misc'].tic()
         for j in range(1, num_classes):
             max_ = max(scores[:, j])
             inds = np.where(scores[:, j] > args.threshold)[0]
@@ -203,7 +203,8 @@ def demo_stream(net, detector, transform, video, save_dir):
                 cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 1, COLORS[1], 2)
         nms_time = _t['misc'].toc()
         total_time = _t['total'].toc()
-        status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)
+        #status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)
+        status = 'f_cnt: {:d} FPS_inf: {:.2f} FPS_tot: {:.2f} t_misc: {:.3f}s \r'.format(index, float(1/inference_time), float(1/total_time), nms_time)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
         

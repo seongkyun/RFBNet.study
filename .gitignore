@@ -22,8 +22,9 @@ eval
 *.out
 
 # Experimental codes
-./test_demo_RFB.py
-./models/SSD_lite_mobilenets.py
+demo_div2_RFB.py
+demo_center_RFB.py
+models/SSD_lite_mobilenets.py
 
 # Demo files
 demofiles
