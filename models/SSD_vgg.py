@@ -207,19 +207,6 @@ def build_net(phase, size=300, num_classes=21):
                                      mbox[str(size)], num_classes)
     return SSD(phase, size, base_, extras_, head_, num_classes)
 
-'''
-def build_net(phase, size=300, num_classes=21):
-    if phase != "test" and phase != "train":
-        print("Error: Phase not recognized")
-        return
-    if size != 300 and size != 512:
-        print("Error: Sorry only RFBNet300 and RFBNet512 are supported!")
-        return
-
-    return SSD(phase, *multibox(vgg(base[str(size)], 3),
-                         add_extras(extras[str(size)], 1024, size=size),
-                         mbox[str(size)], num_classes), num_classes=num_classes,size=size)
-'''
 def test(device=None):
     if device == "cpu":
         print('CPU mode')

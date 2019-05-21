@@ -148,10 +148,11 @@ class SSDLite(nn.Module):
         num_classes: num of classes 
     """
 
-    def __init__(self, phase, base, extras, head, feature_layer, num_classes):
+    def __init__(self, phase, size, base, extras, head, feature_layer, num_classes):
         super(SSDLite, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
+        self.size = size
         # SSD network
         self.base = nn.ModuleList(base)
         self.Norm = L2Norm(feature_layer[1][0], 20)
@@ -263,9 +264,9 @@ def _conv_dw(inp, oup, stride=1, padding=0, expand_ratio=1):
         nn.BatchNorm2d(oup),
     )
 
-def build_ssd_lite(phase, base, feature_layer, mbox, num_classes):
+def build_ssd_lite(phase, size, base, feature_layer, mbox, num_classes):
     base_, extras_, head_ = add_extras(base(), feature_layer, mbox, num_classes)
-    return SSDLite(phase, base_, extras_, head_, feature_layer, num_classes)
+    return SSDLite(phase, size, base_, extras_, head_, feature_layer, num_classes)
 
 ASPECT_RATIOS = [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
 number_box= [2*len(aspect_ratios) if isinstance(aspect_ratios[0], int) else len(aspect_ratios) for aspect_ratios in ASPECT_RATIOS]  
@@ -281,7 +282,7 @@ def build_net(phase, size=300, num_classes=21):
     base = mobilenet_v2
     FEATURE_LAYER = [[13, 17, 'S', 'S', 'S', 'S'], [96, 320, 512, 256, 256, 128]]
 
-    model = build_ssd_lite(phase=phase, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
+    model = build_ssd_lite(phase=phase, size=size, base=base, feature_layer=FEATURE_LAYER, mbox=number_box, num_classes=num_classes)
 
     return model
 
@@ -303,22 +304,6 @@ def test(device=None):
 #test("cpu")
 
 '''
-======Results for SSD lite mobilenet v1======
-
-Total params: 7,844,832
-Trainable params: 7,844,832
-Non-trainable params: 0
-----------------------------------------------------------------
-Input size (MB): 1.03
-Forward/backward pass size (MB): 257.18
-Params size (MB): 29.93
-Estimated Total Size (MB): 288.13
-----------------------------------------------------------------
-coords output size:  torch.Size([32, 2990, 4])
-class output size:  torch.Size([32, 2990, 21])
-
-======Results for SSD lite mobilenet v2======
-
 Total params: 4,577,792
 Trainable params: 4,577,792
 Non-trainable params: 0

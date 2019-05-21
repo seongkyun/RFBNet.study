@@ -22,7 +22,8 @@ eval
 *.out
 
 # Experimental codes
-models/SSD_vgg.py.old
+./test_demo_RFB.py
+./models/SSD_lite_mobilenets.py
 
 # Demo files
 demofiles
