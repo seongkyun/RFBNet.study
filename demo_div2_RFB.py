@@ -153,25 +153,76 @@ def demo_img(net, detector, transform, img, save_dir):
     cv2.imwrite(save_dir, img)
     print(status)
 
+#cv2.rectangle(img, (start x, start y), (end x, end y), (color), thickness)
+#bbox: [start x, start y, end x, end y]
+def calc_iou(boxA, boxB):
+    #order: [start x, start y, end x, end y]
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+ 
+    # compute the area of intersection rectangle
+    #interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+ 
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+ 
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+ 
+    # return the intersection over union value
+    return iou
+
+def is_overlap_area(gt, box):
+    #order: [start x, start y, end x, end y]
+    if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
+    or (gt[0]<=int(box[2]) and int(box[2])<=gt[2])\
+    or (gt[0]<=int(box[0]) and int(box[0])<=gt[2]):
+        return True
+    else:
+        return False
+
 def demo_stream(net, detector, transform, video, save_dir):
     _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
 
     index = -1
     #avgFPS = 0.0
+
+    width = int(video.get(3))
+    height = int(video.get(4))
+
+    half = width//2
+
+    scale = torch.Tensor([width, height, width, height])
+
+    over_area = 80
+
+    #bbox: [start x, start y, end x, end y]
+    middle_coords = [half-over_area, 0, half+over_area, height]
+    middle_objs=[]
+
     while(video.isOpened()):
         _t['total'].tic()
         index = index + 1
 
+        middle_objs=[]
+
         flag, img = video.read()
         
-        width = img.shape[1]
-        height = img.shape[0]
+        #width = img.shape[1]
+        #height = img.shape[0]
+        #scale = torch.Tensor([img.shape[1], img.shape[0],
+        #                 img.shape[1], img.shape[0]])
 
-        scale = torch.Tensor([img.shape[1], img.shape[0],
-                         img.shape[1], img.shape[0]])
-
-        img_l = img[:, :width//2]
-        img_r = img[:, width//2:]
+        img_l = img[:, :half+over_area]
+        img_r = img[:, half-over_area:]
 
         scale_l = torch.Tensor([img_l.shape[1], img_l.shape[0],
                          img_l.shape[1], img_l.shape[0]])
@@ -204,6 +255,7 @@ def demo_stream(net, detector, transform, video, save_dir):
         scores_l = scores_l.cpu().numpy()
         scores_r = scores_r.cpu().numpy()
         
+        # left objects
         for j in range(1, num_classes):
             max_ = max(scores_l[:, j])
             inds = np.where(scores_l[:, j] > args.threshold)[0]
@@ -219,10 +271,17 @@ def demo_stream(net, detector, transform, video, save_dir):
             c_bboxes=c_dets[:, :4]
             for bbox in c_bboxes:
                 # Create a Rectangle patch
-                label = labels[j-1]
-                score = c_dets[0][4]
-                cv2.rectangle(img_l, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                cv2.putText(img_l, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+
+                if is_overlap_area(middle_coords, bbox):
+                    middle_objs.append(bbox)
+                    cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (0, 0, 255), 2)
+                else:
+                    label = labels[j-1]
+                    score = c_dets[0][4]
+                    cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
+                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+        
+        # right objects
         for j in range(1, num_classes):
             max_ = max(scores_r[:, j])
             inds = np.where(scores_r[:, j] > args.threshold)[0]
@@ -238,11 +297,17 @@ def demo_stream(net, detector, transform, video, save_dir):
             c_bboxes=c_dets[:, :4]
             for bbox in c_bboxes:
                 # Create a Rectangle patch
-                label = labels[j-1]
-                score = c_dets[0][4]
-                cv2.rectangle(img_r, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                cv2.putText(img_r, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
-        img = np.concatenate((img_l, img_r), axis=1)
+
+                if is_overlap_area(middle_coords, bbox):
+                    middle_objs.append(bbox)
+                    cv2.rectangle(img, (half-over_area+int(bbox[0]), int(bbox[1])), (half-over_area+int(bbox[2]), int(bbox[3])), (0, 0, 255), 2)
+                else:
+                    label = labels[j-1]
+                    score = c_dets[0][4]
+                    cv2.rectangle(img, (half-over_area+int(bbox[0]), int(bbox[1])), (half-over_area+int(bbox[2]), int(bbox[3])), COLORS[3], 2)
+                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (half-over_area+int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+        
+        #img = np.concatenate((img_l, img_r), axis=1)
         nms_time = _t['misc'].toc()
         total_time = _t['total'].toc()
         #status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)
@@ -250,6 +315,10 @@ def demo_stream(net, detector, transform, video, save_dir):
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
         
+        # For the test
+        cv2.line(img, (middle_coords[0], 0), (middle_coords[0], height), (0, 0, 255), 2) 
+        cv2.line(img, (middle_coords[2], 0), (middle_coords[2], height), (0, 0, 255), 2) 
+
         cv2.imshow('result', img)
         cv2.waitKey(33)
         
