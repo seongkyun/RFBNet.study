@@ -22,8 +22,8 @@ eval
 *.out
 
 # Experimental codes
-demo_center_RFB.py
 models/SSD_lite_mobilenets.py
+trashbins
 
 # Demo files
 demofiles
