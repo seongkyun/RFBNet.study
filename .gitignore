@@ -22,7 +22,6 @@ eval
 *.out
 
 # Experimental codes
-demo_div2_RFB.py.old
 demo_center_RFB.py
 models/SSD_lite_mobilenets.py
 
