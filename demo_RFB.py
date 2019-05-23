@@ -144,7 +144,7 @@ def demo_img(net, detector, transform, img, save_dir):
             label = labels[j-1]
             score = c_dets[0][4]
             cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 1, COLORS[1], 2)
+            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
     nms_time = _t['misc'].toc()
     #status = ' inference time: {:.3f}s \n nms time: {:.3f}s \n FPS: {:d}'.format(inference_time, nms_time, int(1/(inference_time+nms_time)))
     status = 't_inf: {:.3f} s || t_misc: {:.3f} s  \r'.format(inference_time, nms_time)
@@ -163,8 +163,8 @@ def demo_stream(net, detector, transform, video, save_dir):
         index = index + 1
 
         flag, img = video.read()
-        #if flag == False: # For fasten loop
-        #    break
+        if flag == False:
+            break
         scale = torch.Tensor([img.shape[1], img.shape[0],
                          img.shape[1], img.shape[0]])
         with torch.no_grad():
@@ -200,7 +200,7 @@ def demo_stream(net, detector, transform, video, save_dir):
                 label = labels[j-1]
                 score = c_dets[0][4]
                 cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 1, COLORS[1], 2)
+                cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
         nms_time = _t['misc'].toc()
         total_time = _t['total'].toc()
         #status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)

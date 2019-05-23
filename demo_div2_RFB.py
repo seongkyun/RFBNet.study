@@ -109,6 +109,7 @@ with torch.no_grad():
         priors = priors.cuda()
 
 def demo_img(net, detector, transform, img, save_dir):
+    print('Image mode is same as original code.')
     _t = {'inference': Timer(), 'misc': Timer()}
     scale = torch.Tensor([img.shape[1], img.shape[0],
                          img.shape[1], img.shape[0]])
@@ -157,28 +158,39 @@ def is_overlap_area(gt, box):
     #order: [start x, start y, end x, end y]
     if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
     or (gt[0]<=int(box[2]) and int(box[2])<=gt[2])\
-    or (gt[0]<=int(box[0]) and int(box[0])<=gt[2]):
+    or (gt[0]<=int(box[0]) and int(box[0])<=gt[2])\
+    or (int(box[0]<=gt[0]) and gt[2]<=int(box[0])):
         return True
     else:
         return False
 
+def lable_selector(box_a, box_b):
+    #order: [start x, start y, end x, end y, lable, score]
+    if box_a[5] > box_b[5]:
+        lable = box_a[4]
+        score = box_a[5]
+    else:
+        lable = box_b[4]
+        score = box_b[5]
+    return lable, score
+
 def bigger_box(box_a, box_b):
-    #order: [start x, start y, end x, end y]
+    #order: [start x, start y, end x, end y, lable, score]
+    lable, score = lable_selector(box_a, box_b)
     bigger_box = [min(box_a[0], box_b[0]), min(box_a[1], box_b[1])
-    , max(box_a[2], box_b[2]), max(box_a[3], box_b[3])]
+    , max(box_a[2], box_b[2]), max(box_a[3], box_b[3])
+    , lable, score]
     return bigger_box
 
 def is_same_obj(box, r_box, th):
     #order: [start x, start y, end x, end y]
-    
     th_y = th // 3
     th_x = (th * 2) // 3
-
     r_mx = (r_box[0] + r_box[2]) // 2
-
     sy_dist = abs(r_box[1] - box[1])
     ey_dist = abs(r_box[3] - box[3])
     l_mx = (box[0] + box[2]) // 2
+
     if sy_dist<th_y and ey_dist<th_y:
         if abs(l_mx - r_mx) < th_x:
             return True
@@ -200,11 +212,7 @@ def get_close_obj(boxes, r_box, th):
     for j in range(len(obj_map)):
         new_obj += int(obj_map[j])
         if obj_map[j]:
-            label = boxes[j][4]
-            score = boxes[j][5]
             boxes[j] = bigger_box(r_box, boxes[j])
-            boxes[j].append(label) # label
-            boxes[j].append(score) # score
 
     # add the none existing obj
     if new_obj == 0:
@@ -222,13 +230,13 @@ def demo_stream(net, detector, transform, video, save_dir):
     height = int(video.get(4))
 
     half = width // 2
-    over_area = 80
+    over_area = int(width*0.0625)
 
     scale = torch.Tensor([width, height, width, height])
     scale_half = torch.Tensor([half+over_area, height, half+over_area, height])
 
     middle_coords = [half-over_area, 0, half+over_area, height]
-    l_middle_objs=[]
+    l_middle_objs = []
 
     while(video.isOpened()):
         _t['total'].tic()
@@ -236,6 +244,9 @@ def demo_stream(net, detector, transform, video, save_dir):
         l_middle_objs=[]
 
         flag, img = video.read()
+        if flag == False:
+            print('')
+            break
         
         img_l = img[:, :half+over_area]
         img_r = img[:, half-over_area:]
@@ -293,7 +304,7 @@ def demo_stream(net, detector, transform, video, save_dir):
                     label = labels[j-1]
                     score = c_dets[0][4]
                     cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
 
         # right objects
         for j in range(1, num_classes):
@@ -324,14 +335,14 @@ def demo_stream(net, detector, transform, video, save_dir):
                     label = labels[j-1]
                     score = c_dets[0][4]
                     cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+                    cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
         
         # middle objects
         for bbox in l_middle_objs:
             label = labels[bbox[4]-1]
             score = bbox[5]
             cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
 
         nms_time = _t['misc'].toc()
         total_time = _t['total'].toc()
