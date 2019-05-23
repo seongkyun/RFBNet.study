@@ -153,33 +153,6 @@ def demo_img(net, detector, transform, img, save_dir):
     cv2.imwrite(save_dir, img)
     print(status)
 
-#cv2.rectangle(img, (start x, start y), (end x, end y), (color), thickness)
-#bbox: [start x, start y, end x, end y]
-def calc_iou(boxA, boxB):
-    #order: [start x, start y, end x, end y]
-    # determine the (x, y)-coordinates of the intersection rectangle
-    xA = max(boxA[0], boxB[0])
-    yA = max(boxA[1], boxB[1])
-    xB = min(boxA[2], boxB[2])
-    yB = min(boxA[3], boxB[3])
- 
-    # compute the area of intersection rectangle
-    #interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
- 
-    # compute the area of both the prediction and ground-truth
-    # rectangles
-    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
-    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
- 
-    # compute the intersection over union by taking the intersection
-    # area and dividing it by the sum of prediction + ground-truth
-    # areas - the interesection area
-    iou = interArea / float(boxAArea + boxBArea - interArea)
- 
-    # return the intersection over union value
-    return iou
-
 def is_overlap_area(gt, box):
     #order: [start x, start y, end x, end y]
     if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
@@ -197,47 +170,26 @@ def bigger_box(box_a, box_b):
 
 def is_same_obj(box, r_box, th):
     #order: [start x, start y, end x, end y]
-    th_y = th // 2
-    th_x = th
     
-    sx = r_box[0]
-    sy = r_box[1]
-    ex = r_box[2]
-    ey = r_box[3]
-    r_mx = (sx + ex) // 2
+    th_y = th // 3
+    th_x = (th * 2) // 3
 
-    sy_dist = abs(sy - box[1])
-    ey_dist = abs(ey - box[3])
+    r_mx = (r_box[0] + r_box[2]) // 2
+
+    sy_dist = abs(r_box[1] - box[1])
+    ey_dist = abs(r_box[3] - box[3])
     l_mx = (box[0] + box[2]) // 2
     if sy_dist<th_y and ey_dist<th_y:
         if abs(l_mx - r_mx) < th_x:
-            #print('condition passed')
             return True
         else:
-            #print('x condition not passed')
             return False
     else:
-        #print('sy_dist: ', sy_dist)
-        #print('ey_dist: ', ey_dist)
-        #print('y condition not passed')
         return False
 
-
-
-
 def get_close_obj(boxes, r_box, th):
-    #order: [start x, start y, end x, end y]
-    th_y = th // 3
-    th_x = th // 2 # over_area/2
-    sx = r_box[0]
-    sy = r_box[1]
-    ex = r_box[2]
-    ey = r_box[3]
-    r_mx = (sx + ex) // 2
-    #print('oriboxes: ', len(boxes))
-    #print(boxes)
-    #print('==================')
-    
+    #order: [start x, start y, end x, end y, lable, score]
+
     # make the same object map
     obj_map = []
     new_obj = 0
@@ -248,14 +200,11 @@ def get_close_obj(boxes, r_box, th):
     for j in range(len(obj_map)):
         new_obj += int(obj_map[j])
         if obj_map[j]:
-            #result_obj.append(bigger_box(r_box, boxes[j]))
-            #print('if True: ', boxes[j])
             label = boxes[j][4]
             score = boxes[j][5]
             boxes[j] = bigger_box(r_box, boxes[j])
             boxes[j].append(label) # label
             boxes[j].append(score) # score
-            #print('if True after: ', boxes[j])
 
     # add the none existing obj
     if new_obj == 0:
@@ -263,23 +212,6 @@ def get_close_obj(boxes, r_box, th):
 
     return None
 
-        
-            #continue
-    #print('modiboxes: ', len(boxes))
-    #print(boxes)
-    #print('==================')
-    #return result_obj
-    
-'''
-def is_same_obj(box_a, box_b):
-    #order: [start x, start y, end x, end y]
-    th_x = 80
-    th_y = 40
-    m_a = (box_a[0] + box_a[2]) // 2
-    m_b = (box_b[0] + box_b[2]) // 2
-    sy_dist = abs(box_a[1] - box_b[1])
-    ey_dist = abs(box_a[3] - box_b[3])
-'''
 def demo_stream(net, detector, transform, video, save_dir):
     _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
 
@@ -289,37 +221,24 @@ def demo_stream(net, detector, transform, video, save_dir):
     width = int(video.get(3))
     height = int(video.get(4))
 
-    half = width//2
+    half = width // 2
+    over_area = 80
 
     scale = torch.Tensor([width, height, width, height])
+    scale_half = torch.Tensor([half+over_area, height, half+over_area, height])
 
-    over_area = 80
-    #bbox: [start x, start y, end x, end y]
     middle_coords = [half-over_area, 0, half+over_area, height]
     l_middle_objs=[]
-    draw_objs=[]
 
     while(video.isOpened()):
         _t['total'].tic()
         index = index + 1
-
         l_middle_objs=[]
-        #r_middle_objs=[]
 
         flag, img = video.read()
         
-        #width = img.shape[1]
-        #height = img.shape[0]
-        #scale = torch.Tensor([img.shape[1], img.shape[0],
-        #                 img.shape[1], img.shape[0]])
-
         img_l = img[:, :half+over_area]
         img_r = img[:, half-over_area:]
-
-        scale_l = torch.Tensor([img_l.shape[1], img_l.shape[0],
-                         img_l.shape[1], img_l.shape[0]])
-        scale_r = torch.Tensor([img_r.shape[1], img_r.shape[0],
-                         img_r.shape[1], img_r.shape[0]])
 
         with torch.no_grad():
             x_l = transform(img_l).unsqueeze(0)
@@ -327,8 +246,7 @@ def demo_stream(net, detector, transform, video, save_dir):
             if args.cuda:
                 x_l = x_l.cuda()
                 x_r = x_r.cuda()
-                scale_l = scale_l.cuda()
-                scale_r = scale_r.cuda()
+                scale_half = scale_half.cuda()
         _t['inference'].tic()
         out_l = net(x_l)      # forward pass
         out_r = net(x_r)      # forward pass
@@ -340,8 +258,8 @@ def demo_stream(net, detector, transform, video, save_dir):
         boxes_r = boxes_r[0]
         scores_l = scores_l[0]
         scores_r = scores_r[0]
-        boxes_l *= scale_l
-        boxes_r *= scale_r
+        boxes_l *= scale_half
+        boxes_r *= scale_half
         boxes_l = boxes_l.cpu().numpy()
         boxes_r = boxes_r.cpu().numpy()
         scores_l = scores_l.cpu().numpy()
@@ -351,7 +269,6 @@ def demo_stream(net, detector, transform, video, save_dir):
         for j in range(1, num_classes):
             max_ = max(scores_l[:, j])
             inds = np.where(scores_l[:, j] > args.threshold)[0]
-            #inds = np.where(scores[:, j] > 0.6)[0] # For higher accuracy
             if inds is None:
                 continue
             c_bboxes = boxes_l[inds]
@@ -369,25 +286,19 @@ def demo_stream(net, detector, transform, video, save_dir):
                 ey = int(bbox[3])
                 bbox = [sx, sy, ex, ey]
                 if is_overlap_area(middle_coords, bbox):
-                    #bbox.append([(sx+ex)//2, (sy+ey)//2])
                     bbox.append(j)
                     bbox.append(float(c_dets[0][4]))
                     l_middle_objs.append(bbox)
-                    #cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
                 else:
-                    #l_middle_objs.append(-1)
                     label = labels[j-1]
                     score = c_dets[0][4]
                     cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
                     cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
-        #print('ori left middle objs')
-        #print(l_middle_objs)
-        #print('done')
+
         # right objects
         for j in range(1, num_classes):
             max_ = max(scores_r[:, j])
             inds = np.where(scores_r[:, j] > args.threshold)[0]
-            #inds = np.where(scores[:, j] > 0.6)[0] # For higher accuracy
             if inds is None:
                 continue
             c_bboxes = boxes_r[inds]
@@ -404,54 +315,29 @@ def demo_stream(net, detector, transform, video, save_dir):
                 ex = int(half - over_area + bbox[2])
                 ey = int(bbox[3])
                 bbox = [sx, sy, ex, ey]
-                #bbox_ori = [sx, sy, ex, ey]
                 if is_overlap_area(middle_coords, bbox):
-                    #mp = [(sx+ex)//2, (sy+ey)//2]
-                    #bbox.append(0) #test
                     bbox.append(j)
                     bbox.append(float(c_dets[0][4]))
-                    #print('right: ', bbox)
                     get_close_obj(l_middle_objs, bbox, over_area)
-                    #print('right modi objs')
-                    #print(l_middle_objs)
-                    #print('done')
                     continue
-
-                    #r_middle_objs.append(bbox)
-                    #cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (0, 0, 255), 2)
-                    #cv2.rectangle(img, (int(bbox_ori[0]), int(bbox_ori[1])), (int(bbox_ori[2]), int(bbox_ori[3])), (255, 0, 255), 2)
                 else:
-                    #r_middle_objs.append(-1)
                     label = labels[j-1]
                     score = c_dets[0][4]
                     cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
                     cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
-        # For the test
-        #cv2.line(img, (middle_coords[0], 0), (middle_coords[0], height), (0, 0, 255), 2) 
-        #cv2.line(img, (middle_coords[2], 0), (middle_coords[2], height), (0, 0, 255), 2) 
-        #print('modi objs')
-        #print(l_middle_objs)
-        #print('done')
+        
+        # middle objects
         for bbox in l_middle_objs:
             label = labels[bbox[4]-1]
             score = bbox[5]
             cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
             cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
-        #    if len(bbox) == 4:
-        #        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
-        #    else:
-        #        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 255), 2)
-        #print('frame cnt: ', index)
-        #print(l_middle_objs)
-        #print(r_middle_objs)
-        #img = np.concatenate((img_l, img_r), axis=1)
+
         nms_time = _t['misc'].toc()
         total_time = _t['total'].toc()
-        #status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)
         status = 'f_cnt: {:d} FPS_inf: {:.2f} FPS_tot: {:.2f} t_misc: {:.3f}s \r'.format(index, float(1/inference_time), float(1/total_time), nms_time)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
-        
 
         cv2.imshow('result', img)
         cv2.waitKey(33)
