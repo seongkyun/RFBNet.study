@@ -227,8 +227,8 @@ def is_same_obj(box, r_box, th):
 
 def get_close_obj(boxes, r_box, th):
     #order: [start x, start y, end x, end y]
-    th_y = th // 2
-    th_x = th # over_area/2
+    th_y = th // 3
+    th_x = th // 2 # over_area/2
     sx = r_box[0]
     sy = r_box[1]
     ex = r_box[2]
@@ -250,7 +250,11 @@ def get_close_obj(boxes, r_box, th):
         if obj_map[j]:
             #result_obj.append(bigger_box(r_box, boxes[j]))
             #print('if True: ', boxes[j])
+            label = boxes[j][4]
+            score = boxes[j][5]
             boxes[j] = bigger_box(r_box, boxes[j])
+            boxes[j].append(label) # label
+            boxes[j].append(score) # score
             #print('if True after: ', boxes[j])
 
     # add the none existing obj
@@ -366,6 +370,8 @@ def demo_stream(net, detector, transform, video, save_dir):
                 bbox = [sx, sy, ex, ey]
                 if is_overlap_area(middle_coords, bbox):
                     #bbox.append([(sx+ex)//2, (sy+ey)//2])
+                    bbox.append(j)
+                    bbox.append(float(c_dets[0][4]))
                     l_middle_objs.append(bbox)
                     #cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
                 else:
@@ -401,7 +407,9 @@ def demo_stream(net, detector, transform, video, save_dir):
                 #bbox_ori = [sx, sy, ex, ey]
                 if is_overlap_area(middle_coords, bbox):
                     #mp = [(sx+ex)//2, (sy+ey)//2]
-                    bbox.append(0) #test
+                    #bbox.append(0) #test
+                    bbox.append(j)
+                    bbox.append(float(c_dets[0][4]))
                     #print('right: ', bbox)
                     get_close_obj(l_middle_objs, bbox, over_area)
                     #print('right modi objs')
@@ -425,11 +433,14 @@ def demo_stream(net, detector, transform, video, save_dir):
         #print(l_middle_objs)
         #print('done')
         for bbox in l_middle_objs:
-        #    cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
-            if len(bbox) == 4:
-                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
-            else:
-                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 255), 2)
+            label = labels[bbox[4]-1]
+            score = bbox[5]
+            cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
+            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.5, COLORS[1], 2)
+        #    if len(bbox) == 4:
+        #        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 2)
+        #    else:
+        #        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 255), 2)
         #print('frame cnt: ', index)
         #print(l_middle_objs)
         #print(r_middle_objs)
@@ -519,4 +530,3 @@ if __name__ == '__main__':
         demo_stream(net, detector, transform, video, save_dir)
     else:
         raise AssertionError('ERROR::TYPE IS NOT CORRECT')
-
