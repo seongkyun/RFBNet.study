@@ -9,8 +9,6 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import numpy as np
 from torch.autograd import Variable
-#from data import VOCroot
-#from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300, VOC_mobile_300
 from data import *
 import cv2
 import torch.utils.data as data
@@ -95,7 +93,6 @@ elif args.version == 'RFB_mobile_c_l_d':
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
-
 
 # color number book: http://www.n2n.pe.kr/lev-1/color.htm
 COLORS = [(255, 0, 0), (153, 255, 0), (0, 0, 255), (102, 0, 0)] # BGR
@@ -213,6 +210,7 @@ def get_close_obj(boxes, r_box, th):
         new_obj += int(obj_map[j])
         if obj_map[j]:
             boxes[j] = bigger_box(r_box, boxes[j])
+            break
 
     # add the none existing obj
     if new_obj == 0:
@@ -330,7 +328,6 @@ def demo_stream(net, detector, transform, video, save_dir):
                     bbox.append(j)
                     bbox.append(float(c_dets[0][4]))
                     get_close_obj(l_middle_objs, bbox, over_area)
-                    continue
                 else:
                     label = labels[j-1]
                     score = c_dets[0][4]
