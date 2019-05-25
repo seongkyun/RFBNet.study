@@ -158,6 +158,12 @@ def demo_stream(net, detector, transform, video, save_dir):
 
     index = -1
     #avgFPS = 0.0
+    width = int(video.get(3))
+    height = int(video.get(4))
+    video_dir = os.path.join(save_dir, 'result.avi')
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video_out = cv2.VideoWriter(video_dir, fourcc, 25.0, (width,height))
+    
     while(video.isOpened()):
         _t['total'].tic()
         index = index + 1
@@ -212,8 +218,15 @@ def demo_stream(net, detector, transform, video, save_dir):
         cv2.waitKey(33)
         
         cv2.imwrite(os.path.join(save_dir, 'frame_{}.jpg'.format(index)), img)
+        video_out.write(img)
+
         sys.stdout.write(status)
         sys.stdout.flush()
+
+    video.release()
+    video_out.release()
+    cv2.destroyAllWindows()   
+
 
 if __name__ == '__main__':
     # Validity check
