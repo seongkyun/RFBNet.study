@@ -110,7 +110,7 @@ def is_overlap_area(gt, box):
     if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
     or (gt[0]<=int(box[2]) and int(box[2])<=gt[2])\
     or (gt[0]<=int(box[0]) and int(box[0])<=gt[2])\
-    or (int(box[0]<=gt[0]) and gt[2]<=int(box[0])):
+    or (int(box[0])<=gt[0] and gt[2]<=int(box[2])):
         return True
     else:
         return False
@@ -141,11 +141,17 @@ def is_same_obj(box, r_box, th):
     sy_dist = abs(r_box[1] - box[1])
     ey_dist = abs(r_box[3] - box[3])
     l_mx = (box[0] + box[2]) // 2
-
-    if sy_dist<th_y and ey_dist<th_y:
+    if sy_dist<th_y and ey_dist<th_y and r_box[4] == box[4]:
         if abs(l_mx - r_mx) < th_x:
             return True
         else:
+            box_size = (box[2] - box[0]) * (box[3] - box[1])
+            r_box_size = (r_box[2] - r_box[0]) * (r_box[3] - r_box[1])
+            th_size = th * th * 9
+            th_th = int(th*0.2)
+            if (box_size >= th_size) and (r_box_size >= th_size)\
+            and (abs(box[2] - th*9)<th_th) and (abs(r_box[0] - th*7)<th_th):
+                return True
             return False
     else:
         return False
@@ -219,7 +225,6 @@ def demo_img(net, detector, transform, img, save_dir):
     boxes_r = boxes_r.cpu().numpy()
     scores_l = scores_l.cpu().numpy()
     scores_r = scores_r.cpu().numpy()
-    
     # left objects
     for j in range(1, num_classes):
         max_ = max(scores_l[:, j])
