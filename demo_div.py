@@ -105,52 +105,6 @@ with torch.no_grad():
     if args.cuda:
         priors = priors.cuda()
 
-def demo_img(net, detector, transform, img, save_dir):
-    print('Image mode is same as original code.')
-    _t = {'inference': Timer(), 'misc': Timer()}
-    scale = torch.Tensor([img.shape[1], img.shape[0],
-                         img.shape[1], img.shape[0]])
-    with torch.no_grad():
-        x = transform(img).unsqueeze(0)
-        if args.cuda:
-            x = x.cuda()
-            scale = scale.cuda()
-    _t['inference'].tic()
-    out = net(x)      # forward pass 
-    boxes, scores = detector.forward(out,priors)
-    inference_time = _t['inference'].toc()
-    boxes = boxes[0]
-    scores = scores[0]
-    boxes *= scale
-    boxes = boxes.cpu().numpy()
-    scores = scores.cpu().numpy()
-    _t['misc'].tic()
-    for j in range(1, num_classes):
-        max_ = max(scores[:, j])
-        inds = np.where(scores[:, j] > args.threshold)[0]
-        if inds is None:
-            continue
-        c_bboxes = boxes[inds]
-        c_scores = scores[inds, j]
-        c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
-            np.float32, copy=False)
-        keep = nms(c_dets, args.threshold, force_cpu=args.cpu)
-        c_dets = c_dets[keep, :]
-        c_bboxes=c_dets[:, :4]
-        for bbox in c_bboxes:
-            # Create a Rectangle patch
-            label = labels[j-1]
-            score = c_dets[0][4]
-            cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 1, COLORS[1], 2)
-    nms_time = _t['misc'].toc()
-    #status = ' inference time: {:.3f}s \n nms time: {:.3f}s \n FPS: {:d}'.format(inference_time, nms_time, int(1/(inference_time+nms_time)))
-    status = 't_inf: {:.3f} s || t_misc: {:.3f} s  \r'.format(inference_time, nms_time)
-    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
-    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
-    cv2.imwrite(save_dir, img)
-    print(status)
-
 def is_overlap_area(gt, box):
     #order: [start x, start y, end x, end y]
     if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
@@ -217,6 +171,130 @@ def get_close_obj(boxes, r_box, th):
         boxes.append(r_box)
 
     return None
+
+def demo_img(net, detector, transform, img, save_dir):
+    
+    _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
+    
+    width = int(img.shape[1])
+    height = int(img.shape[0])
+
+    half = width // 2
+    over_area = int(width*0.0625)
+
+    scale = torch.Tensor([width, height, width, height])
+    scale_half = torch.Tensor([half+over_area, height, half+over_area, height])
+
+    middle_coords = [half-over_area, 0, half+over_area, height]
+    l_middle_objs = []
+
+    _t['total'].tic()
+    l_middle_objs=[]
+    
+    img_l = img[:, :half+over_area]
+    img_r = img[:, half-over_area:]
+
+    with torch.no_grad():
+        x_l = transform(img_l).unsqueeze(0)
+        x_r = transform(img_r).unsqueeze(0)
+        if args.cuda:
+            x_l = x_l.cuda()
+            x_r = x_r.cuda()
+            scale_half = scale_half.cuda()
+
+    _t['inference'].tic()
+    out_l = net(x_l)      # forward pass
+    out_r = net(x_r)      # forward pass
+    inference_time = _t['inference'].toc()
+    _t['misc'].tic()
+    boxes_l, scores_l = detector.forward(out_l,priors)
+    boxes_r, scores_r = detector.forward(out_r,priors)
+    boxes_l = boxes_l[0]
+    boxes_r = boxes_r[0]
+    scores_l = scores_l[0]
+    scores_r = scores_r[0]
+    boxes_l *= scale_half
+    boxes_r *= scale_half
+    boxes_l = boxes_l.cpu().numpy()
+    boxes_r = boxes_r.cpu().numpy()
+    scores_l = scores_l.cpu().numpy()
+    scores_r = scores_r.cpu().numpy()
+    
+    # left objects
+    for j in range(1, num_classes):
+        max_ = max(scores_l[:, j])
+        inds = np.where(scores_l[:, j] > args.threshold)[0]
+        if inds is None:
+            continue
+        c_bboxes = boxes_l[inds]
+        c_scores = scores_l[inds, j]
+        c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
+            np.float32, copy=False)
+        keep = nms(c_dets, args.threshold, force_cpu=False)
+        c_dets = c_dets[keep, :]
+        c_bboxes=c_dets[:, :4]
+        for bbox in c_bboxes:
+            # Create a Rectangle patch
+            sx = int(bbox[0])
+            sy = int(bbox[1])
+            ex = int(bbox[2])
+            ey = int(bbox[3])
+            bbox = [sx, sy, ex, ey]
+            if is_overlap_area(middle_coords, bbox):
+                bbox.append(j)
+                bbox.append(float(c_dets[0][4]))
+                l_middle_objs.append(bbox)
+            else:
+                label = labels[j-1]
+                score = c_dets[0][4]
+                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
+                cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
+
+    # right objects
+    for j in range(1, num_classes):
+        max_ = max(scores_r[:, j])
+        inds = np.where(scores_r[:, j] > args.threshold)[0]
+        if inds is None:
+            continue
+        c_bboxes = boxes_r[inds]
+        c_scores = scores_r[inds, j]
+        c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
+            np.float32, copy=False)
+        keep = nms(c_dets, args.threshold, force_cpu=False)
+        c_dets = c_dets[keep, :]
+        c_bboxes=c_dets[:, :4]
+        for bbox in c_bboxes:
+            # Create a Rectangle patch
+            sx = int(half - over_area + bbox[0])
+            sy = int(bbox[1])
+            ex = int(half - over_area + bbox[2])
+            ey = int(bbox[3])
+            bbox = [sx, sy, ex, ey]
+            if is_overlap_area(middle_coords, bbox):
+                bbox.append(j)
+                bbox.append(float(c_dets[0][4]))
+                get_close_obj(l_middle_objs, bbox, over_area)
+            else:
+                label = labels[j-1]
+                score = c_dets[0][4]
+                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
+                cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
+    
+    # middle objects
+    for bbox in l_middle_objs:
+        label = labels[bbox[4]-1]
+        score = bbox[5]
+        cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
+        cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
+
+    nms_time = _t['misc'].toc()
+    total_time = _t['total'].toc()
+
+    status = 'FPS_inf: {:.2f} FPS_tot: {:.2f} t_misc: {:.3f}s \r'.format(float(1/inference_time), float(1/total_time), nms_time)
+    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
+    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
+    cv2.imwrite(save_dir, img)
+    print(status)
 
 def demo_stream(net, detector, transform, video, save_dir):
     _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
