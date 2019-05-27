@@ -172,7 +172,7 @@ class BasicRFB_a(nn.Module):
         x2 = self.branch2_2(out)
         x3 = self.branch3_2(out)
 
-        out = torch.cat((x0,x1,x2,x3),1)        
+        out = torch.cat((x0,x1,x2,x3),1)
         out = self.ConvLinear(out)
         out = out*self.scale + x
 
@@ -229,11 +229,9 @@ class RFBNet(nn.Module):
         # apply vgg up to conv4_3 relu
         for k in range(12):
             x = self.base[k](x)
-        #print(x.size()) [batch_size(32), 512, 19, 19]
 
         s = self.Norm(x)
         sources.append(s)
-        #print(len(s)) batch_size(32)
 
         for k in range(12, len(self.base)):
             x = self.base[k](x)
@@ -373,18 +371,6 @@ def multibox(size, base, extra_layers, cfg, num_classes):
             conf_layers += [nn.Conv2d(v.out_channels, cfg[i]
                                   * num_classes, kernel_size=1, padding=0)]
             i +=1
-    '''
-    print('========base==========')
-    print(base)
-    print('=========extra=========')
-    print(extra_layers)
-    print('=========loc=========')
-    print(loc_layers)
-    print('=========conf=========')
-    print(conf_layers)
-    import sys
-    sys.exit()
-    '''
     return base, extra_layers, (loc_layers, conf_layers)
 
 mbox = {

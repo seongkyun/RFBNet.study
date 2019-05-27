@@ -147,7 +147,8 @@ def is_same_obj(box, r_box, th):
         else:
             box_size = (box[2] - box[0]) * (box[3] - box[1])
             r_box_size = (r_box[2] - r_box[0]) * (r_box[3] - r_box[1])
-            th_size = th * th * 9
+            #th_size = th * th * 9
+            th_size = th * th * 4
             th_th = int(th*0.2)
             if (box_size >= th_size) and (r_box_size >= th_size)\
             and (abs(box[2] - th*9)<th_th) and (abs(r_box[0] - th*7)<th_th):
