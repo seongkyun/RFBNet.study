@@ -1,15 +1,14 @@
 from __future__ import print_function
 import numpy as np
-
 import torch
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
 from utils.timer import Timer
-import sys
+from lib.functions import *
 
 class ObjectDetector:
-    def __init__(self, net, priorbox, priors, transform, detector, viz_arch=False):
+    def __init__(self, net, priorbox, priors, transform, detector, width, height):
         self.model = net
         self.priorbox = priorbox
         self.priors = priors
@@ -19,7 +18,6 @@ class ObjectDetector:
     def predict(self, img, threshold=0.6):
         # make sure the input channel is 3 
         assert img.shape[2] == 3
-        #scale = torch.Tensor([img.shape[1::-1], img.shape[1::-1]])
         scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         
         _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
@@ -27,8 +25,9 @@ class ObjectDetector:
         # preprocess image
         _t['total'].tic()
         with torch.no_grad():
-            #x = self.transform(img).unsqueeze(0)
             x = self.transform(img).unsqueeze(0).cuda() # for fastening
+            
+            #x = self.transform(img).unsqueeze(0)
             #if args.cuda:
             #    x = x.cuda()
             #    scale = scale.cuda()
@@ -48,95 +47,14 @@ class ObjectDetector:
         for classes in range(detections.size(1)):
             num = 0
             while detections[batch,classes,num,0] >= threshold:
-                #print(detections[batch,classes,num,0])
-                #print(classes-1)
-                #box = detections[batch,classes,num,1:]*scale
-                #print(box)
-                #sys.exit()
                 scores.append(detections[batch,classes,num,0])
                 labels.append(classes-1)
                 coords.append(detections[batch,classes,num,1:]*scale)
                 num+=1
         misc_time = _t['misc'].toc()
         total_time = _t['total'].toc()
-        
-        #if check_time is True:
-        #    return labels, scores, coords, (total_time, inference_time, misc_time)
-        #return labels, scores, coords
+
         return labels, scores, coords, (total_time, inference_time, misc_time)
-
-def is_overlap_area(gt, box):
-    #order: [start x, start y, end x, end y]
-    if(gt[0]<=int(box[0]) and int(box[2])<=gt[2])\
-    or (gt[0]<=int(box[2]) and int(box[2])<=gt[2])\
-    or (gt[0]<=int(box[0]) and int(box[0])<=gt[2])\
-    or (int(box[0])<=gt[0] and gt[2]<=int(box[2])):
-        return True
-    else:
-        return False
-
-def lable_selector(box_a, box_b):
-    #order: [start x, start y, end x, end y, lable, score]
-    if box_a[5] > box_b[5]:
-        lable = box_a[4]
-        score = box_a[5]
-    else:
-        lable = box_b[4]
-        score = box_b[5]
-    return lable, score
-
-def bigger_box(box_a, box_b):
-    #order: [start x, start y, end x, end y, lable, score]
-    lable, score = lable_selector(box_a, box_b)
-    bigger_box = [min(box_a[0], box_b[0]), min(box_a[1], box_b[1])
-    , max(box_a[2], box_b[2]), max(box_a[3], box_b[3])
-    , lable, score]
-    return bigger_box
-
-def is_same_obj(box, r_box, th):
-    #order: [start x, start y, end x, end y]
-    th_y = th // 3
-    th_x = (th * 2) // 3
-    r_mx = (r_box[0] + r_box[2]) // 2
-    sy_dist = abs(r_box[1] - box[1])
-    ey_dist = abs(r_box[3] - box[3])
-    l_mx = (box[0] + box[2]) // 2
-    if sy_dist<th_y and ey_dist<th_y and r_box[4] == box[4]:
-        if abs(l_mx - r_mx) < th_x:
-            return True
-        else:
-            box_size = (box[2] - box[0]) * (box[3] - box[1])
-            r_box_size = (r_box[2] - r_box[0]) * (r_box[3] - r_box[1])
-            th_size = th * th * 9
-            th_th = int(th*0.2)
-            if (box_size >= th_size) and (r_box_size >= th_size)\
-            and (abs(box[2] - th*9)<th_th) and (abs(r_box[0] - th*7)<th_th):
-                return True
-            return False
-    else:
-        return False
-
-def get_close_obj(boxes, r_box, th):
-    #order: [start x, start y, end x, end y, lable, score]
-
-    # make the same object map
-    obj_map = []
-    new_obj = 0
-    for j in range(len(boxes)):
-        obj_map.append(is_same_obj(boxes[j], r_box, th))
-
-    # change the existing object
-    for j in range(len(obj_map)):
-        new_obj += int(obj_map[j])
-        if obj_map[j]:
-            boxes[j] = bigger_box(r_box, boxes[j])
-            break
-
-    # add the none existing obj
-    if new_obj == 0:
-        boxes.append(r_box)
-
-    return None
 
 class ObjectDetector_div:
     def __init__(self, net, priorbox, priors, transform, detector, width, height):
@@ -145,11 +63,8 @@ class ObjectDetector_div:
         self.priors = priors
         self.transform = transform
         self.detector = detector
-        #self.width = width
-        #self.height = height
         self.half = width//2
         self.over_area = int(width*0.0625)
-        self.scale = torch.Tensor([width, height, width, height])
         self.scale_half = torch.Tensor([self.half+self.over_area, height, self.half+self.over_area, height])
         self.middle_coords = [self.half-self.over_area, 0, self.half+self.over_area, height]
 
@@ -169,6 +84,9 @@ class ObjectDetector_div:
         with torch.no_grad():
             x_l = self.transform(img_l).unsqueeze(0).cuda() # for fastening
             x_r = self.transform(img_r).unsqueeze(0).cuda() # for fastening
+            
+            #x_l = self.transform(img_l).unsqueeze(0)
+            #x_r = self.transform(img_r).unsqueeze(0)
             #if args.cuda:
             #    x = x.cuda()
             #    scale = scale.cuda()
