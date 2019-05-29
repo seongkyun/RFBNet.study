@@ -18,7 +18,9 @@ import matplotlib.image as mpimg
 import matplotlib.patches as patches
 from utils.nms_wrapper import nms
 from utils.timer import Timer
-from lib.detector import ObjectDetector
+from lib.detector import ObjectDetector_div as ObjectDetector
+
+import sys
 
 parser = argparse.ArgumentParser(description='Receptive Field Block Net')
 
@@ -109,20 +111,16 @@ with torch.no_grad():
 def demo_img(object_detector, img, save_dir):
     
     #labels, scores, coords, (total_time, inference_time, misc_time)
-    _labels, _scores, _coords, times= object_detector.predict(img)
-    print(_labels)
-    print(_scores)
-    print(_coords)
+    _labels, _scores, _coords, times= object_detector.predict(img, args.threshold)
+
     FPS = float(1/times[0])
     for labels, scores, coords in zip(_labels, _scores, _coords):
         cv2.rectangle(img, (int(coords[0]), int(coords[1])), (int(coords[2]), int(coords[3])), COLORS[1], 2)
         cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
     
-    status = 'FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.3f}s \r'.format(FPS, times[1], times[2])
+    status = 'FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.2f}s \r'.format(FPS, times[1], times[2])
     cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
-       
     cv2.imwrite(save_dir, img)
-
 
 def demo_stream(object_detector, video, save_dir):
     index = -1
@@ -142,7 +140,10 @@ def demo_stream(object_detector, video, save_dir):
         if flag == False:
             break
         #labels, scores, coords, (total_time, inference_time, misc_time)
-        _labels, _scores, _coords, times= object_detector.predict(img)
+        _labels, _scores, _coords, times= object_detector.predict(img, args.threshold)
+        #print(index, _labels, _scores, _coords)
+        #if index == 3:
+        #    sys.exit()
         
         FPS = float(1/times[0])    
 
@@ -150,7 +151,7 @@ def demo_stream(object_detector, video, save_dir):
             cv2.rectangle(img, (int(coords[0]), int(coords[1])), (int(coords[2]), int(coords[3])), COLORS[1], 2)
             cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
     
-        status = 'f_cnt: {:d} FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.3f}s \r'.format(index, FPS, times[1], times[2])
+        status = 'f_cnt: {:d} FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.2f}s \r'.format(index, FPS, times[1], times[2])
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
 
         cv2.imwrite(os.path.join(save_dir, 'frame_{}.jpg'.format(index)), img)
@@ -217,20 +218,37 @@ if __name__ == '__main__':
         net = net.cpu()
     print('Finished loading model')
     
-    detector = Detect_test(num_classes, 0, cfg, 0.6, args.threshold, 100, priors)
+    nms_th = 0.45
+    max_det = 100
+
+    detector = Detect_test(num_classes, 0, cfg, nms_th, args.threshold, max_det, priors)
     transform = BaseTransform(net.size, rgb_means, (2, 0, 1))
-    object_detector = ObjectDetector(net, priorbox, priors, transform, detector)
 
     # Running demo
     print('Running demo...')
     if args.type == 'image':
         img = cv2.imread(args.file)
+        
+        width = int(img.shape[1])
+        height = int(img.shape[0])
+        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        
         demo_img(object_detector, img, save_dir)
     elif args.type == 'video':
         video = cv2.VideoCapture(args.file)
+        
+        width = int(video.get(3))
+        height = int(video.get(4))
+        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        
         demo_stream(object_detector, video, save_dir)
     elif args.type == 'camera':
         video = cv2.VideoCapture(args.camera_num)
+
+        width = int(video.get(3))
+        height = int(video.get(4))
+        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        
         demo_stream(object_detector, video, save_dir)
     else:
         raise AssertionError('ERROR::TYPE IS NOT CORRECT')
