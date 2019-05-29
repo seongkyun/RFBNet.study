@@ -9,17 +9,16 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import numpy as np
 from torch.autograd import Variable
-#from data import VOCroot
-#from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300, VOC_mobile_300
 from data import *
 import cv2
 import torch.utils.data as data
-from layers.functions import Detect,PriorBox
+from layers.functions import Detect_test,PriorBox
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.patches as patches
 from utils.nms_wrapper import nms
 from utils.timer import Timer
+from lib.detector import ObjectDetector
 
 parser = argparse.ArgumentParser(description='Receptive Field Block Net')
 
@@ -54,11 +53,11 @@ if not os.path.exists(args.save_folder):
 if args.dataset == 'VOC':
     cfg = (VOC_300, VOC_512)[args.size == '512']
     from data.voc0712 import VOC_CLASSES
-    labels = VOC_CLASSES
+    lable_map = VOC_CLASSES
 else:
     cfg = (COCO_300, COCO_512)[args.size == '512']
     from data.coco import COCO_CLASSES
-    labels = COCO_CLASSES
+    lable_map = COCO_CLASSES
 
 # Version checking
 if args.version == 'RFB_vgg':
@@ -96,9 +95,8 @@ else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
 
-
 # color number book: http://www.n2n.pe.kr/lev-1/color.htm
-COLORS = [(255, 0, 0), (153, 255, 0), (0, 0, 255), (102, 0, 0)] # BGR
+COLORS = [(255, 0, 0), (153, 255, 0), (0, 0, 255), (102, 0, 0), (153, 102, 51)] # BGR
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 # Prior box setting
@@ -108,126 +106,63 @@ with torch.no_grad():
     if args.cuda:
         priors = priors.cuda()
 
-def demo_img(net, detector, transform, img, save_dir):
-    _t = {'inference': Timer(), 'misc': Timer()}
-    scale = torch.Tensor([img.shape[1], img.shape[0],
-                         img.shape[1], img.shape[0]])
-    with torch.no_grad():
-        x = transform(img).unsqueeze(0)
-        if args.cuda:
-            x = x.cuda()
-            scale = scale.cuda()
-    _t['inference'].tic()
-    out = net(x)      # forward pass 
-    boxes, scores = detector.forward(out,priors)
-    inference_time = _t['inference'].toc()
-    boxes = boxes[0]
-    scores = scores[0]
-    boxes *= scale
-    boxes = boxes.cpu().numpy()
-    scores = scores.cpu().numpy()
-    _t['misc'].tic()
-    for j in range(1, num_classes):
-        max_ = max(scores[:, j])
-        inds = np.where(scores[:, j] > args.threshold)[0]
-        if inds is None:
-            continue
-        c_bboxes = boxes[inds]
-        c_scores = scores[inds, j]
-        c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
-            np.float32, copy=False)
-        keep = nms(c_dets, args.threshold, force_cpu=args.cpu)
-        c_dets = c_dets[keep, :]
-        c_bboxes=c_dets[:, :4]
-        for bbox in c_bboxes:
-            # Create a Rectangle patch
-            label = labels[j-1]
-            score = c_dets[0][4]
-            cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-            cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
-    nms_time = _t['misc'].toc()
-    #status = ' inference time: {:.3f}s \n nms time: {:.3f}s \n FPS: {:d}'.format(inference_time, nms_time, int(1/(inference_time+nms_time)))
-    status = 't_inf: {:.3f} s || t_misc: {:.3f} s  \r'.format(inference_time, nms_time)
-    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
-    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
+def demo_img(object_detector, img, save_dir):
+    
+    #labels, scores, coords, (total_time, inference_time, misc_time)
+    _labels, _scores, _coords, times= object_detector.predict(img)
+    print(_labels)
+    print(_scores)
+    print(_coords)
+    FPS = float(1/times[0])
+    for labels, scores, coords in zip(_labels, _scores, _coords):
+        cv2.rectangle(img, (int(coords[0]), int(coords[1])), (int(coords[2]), int(coords[3])), COLORS[1], 2)
+        cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
+    
+    status = 'FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.3f}s \r'.format(FPS, times[1], times[2])
+    cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
+       
     cv2.imwrite(save_dir, img)
-    print(status)
 
-def demo_stream(net, detector, transform, video, save_dir):
-    _t = {'inference': Timer(), 'misc': Timer(), 'total': Timer()}
 
+def demo_stream(object_detector, video, save_dir):
     index = -1
-    #avgFPS = 0.0
+
+    FPS = 0.0
+
     width = int(video.get(3))
     height = int(video.get(4))
     video_dir = os.path.join(save_dir, 'result.avi')
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_out = cv2.VideoWriter(video_dir, fourcc, 25.0, (width,height))
-    
-    while(video.isOpened()):
-        _t['total'].tic()
-        index = index + 1
 
+    while(video.isOpened()):
+        index = index + 1
+        
         flag, img = video.read()
         if flag == False:
             break
-        scale = torch.Tensor([img.shape[1], img.shape[0],
-                         img.shape[1], img.shape[0]])
-        with torch.no_grad():
-            x = transform(img).unsqueeze(0)
-            if args.cuda:
-                x = x.cuda()
-                scale = scale.cuda()
-        _t['inference'].tic()
-        out = net(x)      # forward pass
-        inference_time = _t['inference'].toc()
-        boxes, scores = detector.forward(out,priors)
-        _t['misc'].tic()
-        boxes = boxes[0]
-        scores = scores[0]
-        boxes *= scale
-        boxes = boxes.cpu().numpy()
-        scores = scores.cpu().numpy()
-        for j in range(1, num_classes):
-            max_ = max(scores[:, j])
-            inds = np.where(scores[:, j] > args.threshold)[0]
-            #inds = np.where(scores[:, j] > 0.6)[0] # For higher accuracy
-            if inds is None:
-                continue
-            c_bboxes = boxes[inds]
-            c_scores = scores[inds, j]
-            c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
-                np.float32, copy=False)
-            keep = nms(c_dets, args.threshold, force_cpu=False)
-            c_dets = c_dets[keep, :]
-            c_bboxes=c_dets[:, :4]
-            for bbox in c_bboxes:
-                # Create a Rectangle patch
-                label = labels[j-1]
-                score = c_dets[0][4]
-                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), COLORS[1], 2)
-                cv2.putText(img, '{label}: {score:.2f}'.format(label=label, score=score), (int(bbox[0]), int(bbox[1])), FONT, 0.7, COLORS[1], 2)
-        nms_time = _t['misc'].toc()
-        total_time = _t['total'].toc()
-        #status = 'f_cnt: {:d} || t_inf: {:.3f} s || t_misc: {:.3f} s || t_tot: {:.3f} s  \r'.format(index, inference_time, nms_time, total_time)
-        status = 'f_cnt: {:d} FPS_inf: {:.2f} FPS_tot: {:.2f} t_misc: {:.3f}s \r'.format(index, float(1/inference_time), float(1/total_time), nms_time)
-        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
-        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
+        #labels, scores, coords, (total_time, inference_time, misc_time)
+        _labels, _scores, _coords, times= object_detector.predict(img)
         
-        cv2.imshow('result', img)
-        cv2.waitKey(33)
-        
+        FPS = float(1/times[0])    
+
+        for labels, scores, coords in zip(_labels, _scores, _coords):
+            cv2.rectangle(img, (int(coords[0]), int(coords[1])), (int(coords[2]), int(coords[3])), COLORS[1], 2)
+            cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
+    
+        status = 'f_cnt: {:d} FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.3f}s \r'.format(index, FPS, times[1], times[2])
+        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
+
         cv2.imwrite(os.path.join(save_dir, 'frame_{}.jpg'.format(index)), img)
         video_out.write(img)
 
         sys.stdout.write(status)
         sys.stdout.flush()
-
+    
     video.release()
     video_out.release()
     cv2.destroyAllWindows()   
-
-
+    
 if __name__ == '__main__':
     # Validity check
     print('Validity check...')
@@ -260,6 +195,7 @@ if __name__ == '__main__':
     img_dim = (300,512)[args.size=='512']
     num_classes = (21, 81)[args.dataset == 'COCO']
     rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
+    p = (0.2, 0.6)[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
     print('Loading pretrained model')
     net = build_net('test', 300, num_classes)    # initialize detector
     state_dict = torch.load(args.trained_model)
@@ -281,20 +217,21 @@ if __name__ == '__main__':
         net = net.cpu()
     print('Finished loading model')
     
-    detector = Detect(num_classes,0,cfg)
+    detector = Detect_test(num_classes, 0, cfg, 0.6, args.threshold, 100, priors)
     transform = BaseTransform(net.size, rgb_means, (2, 0, 1))
-    
+    object_detector = ObjectDetector(net, priorbox, priors, transform, detector)
+
     # Running demo
     print('Running demo...')
     if args.type == 'image':
         img = cv2.imread(args.file)
-        demo_img(net, detector, transform, img, save_dir)
+        demo_img(object_detector, img, save_dir)
     elif args.type == 'video':
         video = cv2.VideoCapture(args.file)
-        demo_stream(net, detector, transform, video, save_dir)
+        demo_stream(object_detector, video, save_dir)
     elif args.type == 'camera':
         video = cv2.VideoCapture(args.camera_num)
-        demo_stream(net, detector, transform, video, save_dir)
+        demo_stream(object_detector, video, save_dir)
     else:
         raise AssertionError('ERROR::TYPE IS NOT CORRECT')
 
