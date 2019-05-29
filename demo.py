@@ -131,11 +131,9 @@ def demo_stream(object_detector, video, save_dir):
 
     FPS = 0.0
 
-    width = int(video.get(3))
-    height = int(video.get(4))
     video_dir = os.path.join(save_dir, 'result.avi')
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    video_out = cv2.VideoWriter(video_dir, fourcc, 25.0, (width,height))
+    video_out = cv2.VideoWriter(video_dir, fourcc, 25.0, (object_detector.width,object_detector.height))
 
     while(video.isOpened()):
         index = index + 1
@@ -182,15 +180,17 @@ if __name__ == '__main__':
         path, _ = os.path.splitext(args.file)
         filename = args.version + '_' + path.split('/')[-1]
         save_dir = os.path.join(args.save_folder, filename)
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
     elif args.type == 'camera':
         filename = args.version + '_camera_' + str(args.camera_num)
         save_dir = os.path.join(args.save_folder, filename)
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
     else:
         raise AssertionError('ERROR::TYPE IS NOT CORRECT')
+
+    if args.div:
+        save_dir = save_dir + '_divided_mode'
+
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     # Setting network
     print('Network setting...')
@@ -198,6 +198,7 @@ if __name__ == '__main__':
     num_classes = (21, 81)[args.dataset == 'COCO']
     rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
     p = (0.2, 0.6)[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
+    
     print('Loading pretrained model')
     net = build_net('test', 300, num_classes)    # initialize detector
     state_dict = torch.load(args.trained_model)
@@ -222,6 +223,7 @@ if __name__ == '__main__':
     nms_th = 0.45
     max_det = 100
 
+    print('NMS_th: {:.2f}, Max_det: {:d}, Conf_th: {:.2f}'.format(nms_th, max_det, args.threshold))
     detector = Detect_test(num_classes, 0, cfg, nms_th, args.threshold, max_det, priors)
     transform = BaseTransform(net.size, rgb_means, (2, 0, 1))
 

@@ -11,12 +11,9 @@ def is_overlap_area(gt, box):
 def lable_selector(box_a, box_b):
     #order: [start x, start y, end x, end y, lable, score]
     if box_a[5] > box_b[5]:
-        lable = box_a[4]
-        score = box_a[5]
+        return box_a[4], box_a[5]
     else:
-        lable = box_b[4]
-        score = box_b[5]
-    return lable, score
+        return box_b[4], box_b[5]
 
 def bigger_box(box_a, box_b):
     #order: [start x, start y, end x, end y, lable, score]

@@ -14,6 +14,8 @@ class ObjectDetector:
         self.priors = priors
         self.transform = transform
         self.detector = detector
+        self.width = width
+        self.height = height
 
     def predict(self, img, threshold=0.6):
         # make sure the input channel is 3 
@@ -63,6 +65,8 @@ class ObjectDetector_div:
         self.priors = priors
         self.transform = transform
         self.detector = detector
+        self.width = width
+        self.height = height
         self.half = width//2
         self.over_area = int(width*0.0625)
         self.scale_half = torch.Tensor([self.half+self.over_area, height, self.half+self.over_area, height])
