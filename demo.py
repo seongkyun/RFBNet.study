@@ -175,7 +175,9 @@ if __name__ == '__main__':
     if args.type == 'image':
         path, _ = os.path.splitext(args.file)
         filename = args.version + '_' + path.split('/')[-1]
-        save_dir = os.path.join(args.save_folder, filename + '_divided_mode.jpg')
+        save_dir = os.path.join(args.save_folder, filename + '.jpg')
+        if args.div:
+            save_dir = os.path.join(args.save_folder, filename + '_divided_mode.jpg')
     elif args.type == 'video':
         path, _ = os.path.splitext(args.file)
         filename = args.version + '_' + path.split('/')[-1]
@@ -193,10 +195,6 @@ if __name__ == '__main__':
             os.mkdir(save_dir)
     else:
         raise AssertionError('ERROR::TYPE IS NOT CORRECT')
-
-    
-
-    
 
     # Setting network
     print('Network setting...')
