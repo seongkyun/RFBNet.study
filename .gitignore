@@ -21,6 +21,8 @@ runs
 eval
 *.out
 
+lib
+
 # Experimental codes
 models/SSD_lite_mobilenets.py
 trashbins

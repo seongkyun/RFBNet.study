@@ -51,11 +51,17 @@ if not os.path.exists(args.save_folder):
 # Object detector setting
 if args.div:
     print("Running on divided mode")
-    from lib.detector import ObjectDetector_div as ObjectDetector
+    try:
+        from lib.detector import ObjectDetector_div as ObjectDetector
+    except ImportError:
+        print("lib folder is not exist.")
+        print("Running on common mode")
+        from lib.detector import ObjectDetector   
+        args.div = False
 else:
     print("Running on common mode")
     from lib.detector import ObjectDetector
-
+    
 # Label settings
 if args.dataset == 'VOC':
     cfg = (VOC_300, VOC_512)[args.size == '512']
