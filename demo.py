@@ -52,7 +52,7 @@ if not os.path.exists(args.save_folder):
 if args.div:
     print("Running on divided mode")
     try:
-        from lib.detector import ObjectDetector_div as ObjectDetector
+        from lib.detector_div import ObjectDetector_div as ObjectDetector
     except ImportError:
         print("lib folder is not exist.")
         print("Running on common mode")
@@ -61,7 +61,7 @@ if args.div:
 else:
     print("Running on common mode")
     from lib.detector import ObjectDetector
-    
+
 # Label settings
 if args.dataset == 'VOC':
     cfg = (VOC_300, VOC_512)[args.size == '512']
@@ -157,7 +157,6 @@ def demo_stream(object_detector, video, save_dir):
             cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
     
         status = 'f_cnt: {:d} FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.2f}s \r'.format(index, FPS, times[1], times[2])
-        #cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
         cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
 

@@ -21,7 +21,8 @@ runs
 eval
 *.out
 
-lib
+lib/detector_div.py
+lib/functions.py
 
 # Experimental codes
 models/SSD_lite_mobilenets.py
