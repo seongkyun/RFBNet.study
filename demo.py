@@ -151,7 +151,9 @@ def demo_stream(object_detector, video, save_dir):
             cv2.putText(img, '{label}: {score:.2f}'.format(label=lable_map[labels], score=scores), (int(coords[0]), int(coords[1])), FONT, 0.5, COLORS[1], 2)
     
         status = 'f_cnt: {:d} FPS_tot: {:.2f} t_inf: {:.2f} t_misc: {:.2f}s \r'.format(index, FPS, times[1], times[2])
-        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
+        #cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, COLORS[4], 2)
+        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (0, 0, 0), 5)
+        cv2.putText(img, status[:-2], (10, 20), FONT, 0.7, (255, 255, 255), 2)
 
         cv2.imwrite(os.path.join(save_dir, 'frame_{}.jpg'.format(index)), img)
         video_out.write(img)

@@ -26,7 +26,8 @@ def bigger_box(box_a, box_b):
 def is_same_obj(box, r_box, th):
     #order: [start x, start y, end x, end y]
     th_y = th // 3
-    th_x = (th * 2) // 3
+    #th_x = (th * 2) // 3
+    th_x = th // 2
     r_mx = (r_box[0] + r_box[2]) // 2
     sy_dist = abs(r_box[1] - box[1])
     ey_dist = abs(r_box[3] - box[3])
