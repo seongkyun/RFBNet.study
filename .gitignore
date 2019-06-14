@@ -27,6 +27,7 @@ lib/functions.py
 # Experimental codes
 models/SSD_lite_mobilenets.py
 trashbins
+test_trainset
 
 # Demo files
 demofiles

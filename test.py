@@ -45,6 +45,7 @@ if args.dataset == 'VOC':
 else:
     cfg = (COCO_300, COCO_512)[args.size == '512']
 
+# Version checking
 if args.version == 'RFB_vgg':
     from models.RFB_Net_vgg import build_net
 elif args.version == 'RFB_E_vgg':
@@ -52,30 +53,15 @@ elif args.version == 'RFB_E_vgg':
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c1':
-    from models.RFB_Net_mobile_c1 import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c2':
-    from models.RFB_Net_mobile_c2 import build_net
+elif args.version == 'DRFB_mobile':
+    from models.DRFB_Net_mobile import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_vgg':
     from models.SSD_vgg import build_net
     cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
-elif args.version == 'SSD_lite_mobile_v1':
+elif args.version == 'SSD_mobile':
     from models.SSD_lite_mobilenet_v1 import build_net
     cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'SSD_lite_mobile_v2':
-    from models.SSD_lite_mobilenet_v2 import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c_leaky':
-    print('WARNING::TESTING METHOD')
-    from models.RFB_Net_mobile_c_leaky import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-elif args.version == 'RFB_mobile_c_l_d':
-    print('WARNING::TESTING METHOD')
-    from models.RFB_Net_mobile_c_l_d import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
-
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
