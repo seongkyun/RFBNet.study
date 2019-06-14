@@ -79,16 +79,16 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 elif args.version == 'DRFB_mobile':
     from models.DRFB_Net_mobile import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 elif args.version == 'SSD_vgg':
     from models.SSD_vgg import build_net
     cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_mobile':
     from models.SSD_lite_mobilenet_v1 import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
