@@ -27,7 +27,7 @@ parser.add_argument('-v', '--version', default='RFB_vgg',
 parser.add_argument('-s', '--size', default='300',
                     help='300 or 512 input size.')
 parser.add_argument('-d', '--dataset', default='VOC',
-                    help='VOC or COCO dataset')
+                    help='VOC, COCO or CUSTOM_VOC dataset')
 parser.add_argument('--basenet', default=None, help='pretrained base model')
 parser.add_argument('--jaccard_threshold', default=0.5,
                     type=float, help='Min Jaccard index for matching')
@@ -63,9 +63,16 @@ if not os.path.exists(args.save_folder):
 if args.dataset == 'VOC':
     train_sets = [('2007', 'trainval'), ('2012', 'trainval')]
     cfg = (VOC_300, VOC_512)[args.size == '512']
-else:
+    num_classes = 21
+elif args.dataset == 'COCO':
     train_sets = [('2014', 'train'),('2014', 'valminusminival')]
     cfg = (COCO_300, COCO_512)[args.size == '512']
+    num_classes = 81
+else:
+    #train_sets = [('2014', 'train'),('2014', 'valminusminival')]
+    train_sets = 'Customset'
+    cfg = (COCO_300, COCO_512)[args.size == '512']
+    num_classes = 2
 
 # Version checking
 if args.version == 'RFB_vgg':
@@ -74,16 +81,16 @@ elif args.version == 'RFB_E_vgg':
     from models.RFB_Net_E_vgg import build_net
 elif args.version == 'RFB_mobile':
     from models.RFB_Net_mobile import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 elif args.version == 'DRFB_mobile':
     from models.DRFB_Net_mobile import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 elif args.version == 'SSD_vgg':
     from models.SSD_vgg import build_net
     cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
 elif args.version == 'SSD_mobile':
     from models.SSD_lite_mobilenet_v1 import build_net
-    cfg = (VOC_mobile_300, COCO_mobile_300)[args.dataset == 'COCO']
+    cfg = mobile_300
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
@@ -91,21 +98,20 @@ else:
 img_dim = (300,512)[args.size=='512']
 rgb_means = ((103.94,116.78,123.68), (104, 117, 123))[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
 p = (0.2, 0.6)[args.version == 'RFB_vgg' or args.version == 'RFB_E_vgg']
-num_classes = (21, 81)[args.dataset == 'COCO']
+#num_classes = (21, 81)[args.dataset == 'COCO']
 batch_size = args.batch_size
 weight_decay = 0.0005
 gamma = 0.1
 momentum = 0.9
 
 net = build_net('train', img_dim, num_classes)
-print(net)
+#print(net)
 if args.resume_net == None:
     if args.basenet == None:
         print('!!Model training from scratch!!')
     else:
         print('!!Loading backbone network weight files!!')
         base_weights = torch.load(args.basenet)
-        #print('Loading base network...')
         net.base.load_state_dict(base_weights)
 
     def xavier(param):
@@ -188,16 +194,22 @@ def train():
     elif args.dataset == 'COCO':
         dataset = COCODetection(COCOroot, train_sets, preproc(
             img_dim, rgb_means, p))
+    elif args.dataset == 'custom':
+        dataset = CustomDetection(Customroot, train_sets, preproc(
+            img_dim, rgb_means, p), AnnoTransform_custom())
     else:
-        print('Only VOC and COCO are supported now!')
+        print('Choose dataset among VOC, COCO and custom')
         return
-
     epoch_size = len(dataset) // args.batch_size
     max_iter = args.max_epoch * epoch_size
 
-    stepvalues_VOC = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
-    stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
-    stepvalues = (stepvalues_VOC,stepvalues_COCO)[args.dataset=='COCO']
+    if args.dataset == 'VOC':
+        stepvalues = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
+    elif args.dataset == 'COCO':
+        stepvalues = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
+    else: # for custom dataset
+        stepvalues = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
+    #stepvalues = (stepvalues_VOC,stepvalues_COCO)[args.dataset=='COCO']
     print('Training',args.version, 'on', dataset.name)
     step_index = 0
 
