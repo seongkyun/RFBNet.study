@@ -85,6 +85,9 @@ elif args.version == 'RFB_mobile':
 elif args.version == 'DRFB_mobile':
     from models.DRFB_Net_mobile import build_net
     cfg = mobile_300
+elif args.version == 'WRFB_mobile':
+    from models.WRFB_Net_mobile import build_net
+    cfg = mobile_300
 elif args.version == 'SSD_vgg':
     from models.SSD_vgg import build_net
     cfg = (VOC_SSDVGG_300, COCO_SSDVGG_300)[args.dataset == 'COCO']
