@@ -65,6 +65,8 @@ elif args.version == 'SSD_vgg':
 elif args.version == 'SSD_mobile':
     from models.SSD_lite_mobilenet_v1 import build_net
     cfg = mobile_300
+elif args.version == 'DRFB_mobile_2':
+    from models.DRFB_Net_mobile_2 import build_net
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
@@ -198,7 +200,7 @@ if __name__ == '__main__':
             #COCOroot, [('2015', 'test-dev')], None)
     else:
         print('Only VOC and COCO dataset are supported now!')
-        return
+        sys.exit()
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
