@@ -8,7 +8,7 @@ from utils.timer import Timer
 from lib.functions import *
 
 class ObjectDetector:
-    def __init__(self, net, priorbox, priors, transform, detector, width, height):
+    def __init__(self, net, priorbox, priors, transform, detector, width, height, alt):
         self.model = net
         self.priorbox = priorbox
         self.priors = priors
@@ -16,6 +16,7 @@ class ObjectDetector:
         self.detector = detector
         self.width = width
         self.height = height
+        self.altitude = alt
 
     def predict(self, img, threshold=0.6):
         # make sure the input channel is 3 

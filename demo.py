@@ -42,6 +42,7 @@ parser.add_argument('--cuda', default=True, type=bool,
                     help='Use cuda to train model')
 parser.add_argument('--div', default=False, type=bool, 
                     help='Use half divided mode')
+parser.add_argument('-alt', '--altitude', default=10, help='drone altitude, unit: meter')
 args = parser.parse_args()
 
 # Make result file saving folder
@@ -245,7 +246,8 @@ if __name__ == '__main__':
         
         width = int(img.shape[1])
         height = int(img.shape[0])
-        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        #object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height, args.altitude)
         
         demo_img(object_detector, img, save_dir)
     elif args.type == 'video' or args.type == 'camera':

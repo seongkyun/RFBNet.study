@@ -42,7 +42,6 @@ parser.add_argument('--cuda', default=True, type=bool,
 parser.add_argument('--div', default=False, type=bool, 
                     help='Use half divided mode')
 parser.add_argument('-alt', '--altitude', default=10, help='drone altitude, unit: meter')
-#parser.add_argument('--car_only_mode', default=True, help='detect only vehicles (car, bus, truck)')
 # parsers for calculating mAP
 parser.add_argument('-na', '--no-animation', help="no animation is shown.", action="store_true")
 parser.add_argument('-np', '--no-plot', help="no plot is shown.", action="store_true")
@@ -130,7 +129,7 @@ with torch.no_grad():
 
 def val_images(object_detector, img_dir, anno_dir, save_dir):
     img_list = file_list(img_dir)
-    anno_list = file_list(anno_dir)
+    anno_list = sorted(file_list(anno_dir))
 
     gt_dir = os.path.join(save_dir, 'ground-truth')
     result_dir = os.path.join(save_dir, 'detection-results')
@@ -156,7 +155,6 @@ def val_images(object_detector, img_dir, anno_dir, save_dir):
         # detection
         img = cv2.imread(img_file)
         _labels, _scores, _coords, times= object_detector.predict(img, args.threshold)
-
         
         # writing gt boxes
         f_gt = open(os.path.join(gt_dir, f_name), 'w')
@@ -258,6 +256,7 @@ if __name__ == '__main__':
     width = int(img.shape[1])
     height = int(img.shape[0])
     object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height, args.altitude)
+    #object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
     
     GT_PATH, DR_PATH = val_images(object_detector, args.images, args.annotations, save_dir)
 

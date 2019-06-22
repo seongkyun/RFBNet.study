@@ -13,6 +13,7 @@ build/
 
 weights
 pretrained
+val_results
 
 *.pth
 
