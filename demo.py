@@ -98,6 +98,9 @@ elif args.version == 'SSD_vgg':
 elif args.version == 'SSD_mobile':
     from models.SSD_lite_mobilenet_v1 import build_net
     cfg = mobile_300
+elif args.version == 'DRFB_mobile_2':
+    from models.DRFB_Net_mobile_2 import build_net
+    cfg = mobile_300
 else:
     print('ERROR::UNKNOWN VERSION')
     sys.exit()
