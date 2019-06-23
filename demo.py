@@ -246,7 +246,6 @@ if __name__ == '__main__':
         
         width = int(img.shape[1])
         height = int(img.shape[0])
-        #object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
         object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height, args.altitude)
         
         demo_img(object_detector, img, save_dir)
@@ -255,7 +254,7 @@ if __name__ == '__main__':
         
         width = int(video.get(3))
         height = int(video.get(4))
-        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height)
+        object_detector = ObjectDetector(net, priorbox, priors, transform, detector, width, height, args.altitude)
         
         demo_stream(object_detector, video, save_dir)
     else:
